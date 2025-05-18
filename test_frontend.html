@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PDF SaaS Dummy Frontend</title>
+</head>
+
+<body>
+    <h2>Register</h2>
+    <form id="registerForm">
+        Email: <input type="email" id="regEmail"><br> Password: <input type="password" id="regPassword"><br>
+        <button type="submit">Register</button>
+    </form>
+    <h2>Login</h2>
+    <form id="loginForm">
+        Email: <input type="email" id="loginEmail"><br> Password: <input type="password" id="loginPassword"><br>
+        <button type="submit">Login</button>
+    </form>
+    <h2>Upload PDF</h2>
+    <form id="uploadForm">
+        <input type="file" id="pdfFile"><br>
+        <button type="submit">Upload</button>
+    </form>
+    <h2>List PDFs</h2>
+    <button id="listBtn">List My PDFs</button>
+    <ul id="pdfList"></ul>
+    <h2>Download/Delete PDF</h2>
+    <form id="pdfActionForm">
+        PDF ID: <input type="text" id="pdfIdInput">
+        <button type="button" id="downloadBtn">Download</button>
+        <button type="button" id="deleteBtn">Delete</button>
+    </form>
+    <h2>OCR: Extract Text from PDF</h2>
+    <form id="ocrForm">
+        PDF ID: <input type="text" id="ocrPdfIdInput">
+        <button type="submit">Extract Text</button>
+    </form>
+    <h2>Merge PDFs</h2>
+    <form id="mergeForm">
+        PDF IDs (comma separated): <input type="text" id="mergeIdsInput"> Output Filename: <input type="text" id="mergeOutputFilename" placeholder="merged.pdf">
+        <button type="submit">Merge</button>
+    </form>
+    <h2>Compress PDF</h2>
+    <form id="compressForm">
+        PDF ID: <input type="text" id="compressPdfIdInput">
+        <button type="submit">Compress</button>
+    </form>
+    <h2>Images to PDF</h2>
+    <form id="imageToPdfForm">
+        <input type="file" id="imageFiles" multiple accept="image/*"><br>
+        <button type="submit">Convert to PDF</button>
+    </form>
+    <pre id="output"></pre>
+    <script>
+        let token = "";
+        const BASE_URL = 'http://localhost:8000';
+
+        document.getElementById('registerForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const res = await fetch(BASE_URL + '/api/v1/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            });
+            document.getElementById('output').textContent = await res.text();
+        };
+
+        document.getElementById('loginForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const params = new URLSearchParams();
+            params.append('username', email);
+            params.append('password', password);
+            const res = await fetch(BASE_URL + '/api/v1/auth/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
+            });
+            const data = await res.json();
+            token = data.access_token;
+            document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+        };
+
+        document.getElementById('uploadForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('pdfFile');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            const res = await fetch(BASE_URL + '/api/v1/documents/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: formData
+            });
+            document.getElementById('output').textContent = await res.text();
+        };
+
+        document.getElementById('listBtn').onclick = async function() {
+            const res = await fetch(BASE_URL + '/api/v1/documents/list', {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            const data = await res.json();
+            const pdfList = document.getElementById('pdfList');
+            pdfList.innerHTML = '';
+            data.forEach(doc => {
+                const li = document.createElement('li');
+                li.textContent = `ID: ${doc.id}, Name: ${doc.filename}, Size: ${doc.file_size}, Created: ${doc.created_at}`;
+                pdfList.appendChild(li);
+            });
+            document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+        };
+
+        document.getElementById('downloadBtn').onclick = async function() {
+            const pdfId = document.getElementById('pdfIdInput').value;
+            const res = await fetch(BASE_URL + '/api/v1/documents/' + pdfId, {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = pdfId + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                document.getElementById('output').textContent = 'Downloaded PDF with ID: ' + pdfId;
+            } else {
+                document.getElementById('output').textContent = await res.text();
+            }
+        };
+
+        document.getElementById('deleteBtn').onclick = async function() {
+            const pdfId = document.getElementById('pdfIdInput').value;
+            const res = await fetch(BASE_URL + '/api/v1/documents/' + pdfId, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            document.getElementById('output').textContent = await res.text();
+        };
+
+        document.getElementById('ocrForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const pdfId = document.getElementById('ocrPdfIdInput').value;
+            // Call the new pure OCR endpoint
+            const res = await fetch(BASE_URL + '/api/v1/documents/' + pdfId + '/extract-text', {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            const data = await res.json();
+            document.getElementById('output').textContent = data.text || JSON.stringify(data, null, 2);
+        };
+
+        document.getElementById('mergeForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const ids = document.getElementById('mergeIdsInput').value.split(',').map(s => s.trim());
+            const outputFilename = document.getElementById('mergeOutputFilename').value || 'merged.pdf';
+            const formData = new FormData();
+            ids.forEach(id => formData.append('document_ids', id));
+            formData.append('output_filename', outputFilename);
+            const res = await fetch(BASE_URL + '/api/v1/documents/merge', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: formData
+            });
+            document.getElementById('output').textContent = await res.text();
+        };
+
+        document.getElementById('compressForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const pdfId = document.getElementById('compressPdfIdInput').value;
+            const res = await fetch(BASE_URL + '/api/v1/documents/' + pdfId + '/compress', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            document.getElementById('output').textContent = await res.text();
+        };
+
+        document.getElementById('imageToPdfForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const files = document.getElementById('imageFiles').files;
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            const res = await fetch(BASE_URL + '/api/v1/documents/image-to-pdf', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: formData
+            });
+            document.getElementById('output').textContent = await res.text();
+        };
+    </script>
+</body>
+
+</html>

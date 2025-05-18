@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | PDF SaaS App</title>
+    <link rel="stylesheet" href="assets/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c4.svg">
+</head>
+
+<body>
+    <nav class="navbar navbar-light bg-white shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#"><span style="font-size:1.5rem;">📄</span> PDF SaaS App</a>
+            <button class="btn btn-outline-danger ms-auto" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+    <div class="container-fluid">
+        <div class="row">
+            <aside class="col-md-3 col-lg-2 sidebar d-none d-md-block">
+                <nav class="nav flex-column mt-4">
+                    <a class="nav-link active" id="nav-dashboard" href="#">Dashboard</a>
+                    <a class="nav-link" id="nav-upload" href="#upload">Upload PDF</a>
+                    <a class="nav-link" id="nav-tools" href="#tools">PDF Tools</a>
+                </nav>
+            </aside>
+            <main class="col-md-9 col-lg-10 py-4">
+                <div class="hero mb-4">
+                    <h2 class="fw-bold mb-1">Welcome to your PDF Dashboard</h2>
+                    <p class="mb-0">Manage, convert, and enhance your PDFs with ease.</p>
+                </div>
+                <section id="dashboard">
+                    <h4 class="mb-3">Your PDFs</h4>
+                    <div id="pdfList" class="row g-3 mb-4">
+                        <!-- PDF cards will be rendered here -->
+                    </div>
+                </section>
+                <section id="upload" class="mb-5">
+                    <h4 class="mb-3">Upload PDF</h4>
+                    <form id="uploadForm" class="d-flex align-items-center gap-2 mb-4">
+                        <input type="file" class="form-control" id="pdfFile" accept="application/pdf" required>
+                        <button type="submit" class="btn btn-primary">Upload PDF</button>
+                    </form>
+                </section>
+                <section id="tools">
+                    <h4 class="mb-3">PDF Tools</h4>
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card p-3">
+                                <h5>Merge PDFs</h5>
+                                <form id="mergeForm">
+                                    <input type="file" class="form-control mb-2" id="mergeFiles" accept="application/pdf" multiple required>
+                                    <button type="submit" class="btn btn-primary w-100">Merge</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card p-3">
+                                <h5>Compress PDF</h5>
+                                <form id="compressForm">
+                                    <input type="file" class="form-control mb-2" id="compressFile" accept="application/pdf" required>
+                                    <button type="submit" class="btn btn-primary w-100">Compress</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card p-3">
+                                <h5>OCR (Extract Text)</h5>
+                                <form id="ocrForm">
+                                    <input type="file" class="form-control mb-2" id="ocrFile" accept="application/pdf" required>
+                                    <button type="submit" class="btn btn-primary w-100">Extract Text</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card p-3 mt-3">
+                                <h5>Image to PDF</h5>
+                                <form id="img2pdfForm">
+                                    <input type="file" class="form-control mb-2" id="img2pdfFiles" accept="image/*" multiple required>
+                                    <button type="submit" class="btn btn-primary w-100">Convert</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="toolResult" class="mt-4"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.js"></script>
+    <script src="assets/bootstrap.bundle.min.js"></script>
+    <script src="assets/app.js"></script>
+    <script>
+        // --- Auth check ---
+        if (!getToken()) window.location.href = 'login.html';
+
+        // --- Logout ---
+        document.getElementById('logoutBtn').onclick = function() {
+            removeToken();
+            window.location.href = 'login.html';
+        };
+
+        // --- List PDFs ---
+        async function listPDFs() {
+            const pdfList = document.getElementById('pdfList');
+            pdfList.innerHTML = '';
+            try {
+                const res = await fetch(`${API_BASE}/api/pdf/list`, {
+                    headers: {
+                        Authorization: `Bearer ${getToken()}`
+                    }
+                });
+                if (!res.ok) throw new Error('Failed to fetch PDFs');
+                const data = await res.json();
+                if (!data.length) {
+                    pdfList.innerHTML = '<div class="col-12 text-center text-muted">No PDFs uploaded yet.</div>';
+                    return;
+                }
+                data.forEach(pdf => {
+                    const card = document.createElement('div');
+                    card.className = 'col-md-6 col-lg-4';
+                    card.innerHTML = `
+            <div class="card h-100 p-3">
+              <h6 class="fw-bold mb-2"><i class="bi bi-file-earmark-pdf text-danger"></i> ${pdf.filename}</h6>
+              <div class="d-flex gap-2 mt-2">
+                <a href="${API_BASE}/api/pdf/download/${pdf.id}" class="btn btn-sm btn-success" target="_blank"><i class="bi bi-download"></i> Download</a>
+                <button class="btn btn-sm btn-danger" onclick="deletePDF('${pdf.id}')"><i class="bi bi-trash"></i> Delete</button>
+              </div>
+            </div>
+          `;
+                    pdfList.appendChild(card);
+                });
+            } catch (err) {
+                showAlert(err.message || 'Error loading PDFs');
+            }
+        }
+        window.listPDFs = listPDFs;
+        listPDFs();
+
+        // --- Delete PDF ---
+        window.deletePDF = async function(id) {
+            if (!confirm('Delete this PDF?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/pdf/delete/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${getToken()}`
+                    }
+                });
+                if (!res.ok) throw new Error('Delete failed');
+                listPDFs();
+            } catch (err) {
+                showAlert(err.message || 'Delete failed');
+            }
+        };
+
+        // --- Upload PDF ---
+        document.getElementById('uploadForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const file = document.getElementById('pdfFile').files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_BASE}/api/pdf/upload`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${getToken()}`
+                    },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Upload failed');
+                listPDFs();
+            } catch (err) {
+                showAlert(err.message || 'Upload failed');
+            }
+        };
+
+        // --- Merge PDFs ---
+        document.getElementById('mergeForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const files = document.getElementById('mergeFiles').files;
+            if (!files.length) return;
+            const formData = new FormData();
+            for (const file of files) formData.append('files', file);
+            try {
+                const res = await fetch(`${API_BASE}/api/pdf/merge`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${getToken()}`
+                    },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Merge failed');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                document.getElementById('toolResult').innerHTML = `<a href="${url}" download="merged.pdf" class="btn btn-success"><i class="bi bi-download"></i> Download Merged PDF</a>`;
+            } catch (err) {
+                showAlert(err.message || 'Merge failed');
+            }
+        };
+
+        // --- Compress PDF ---
+        document.getElementById('compressForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const file = document.getElementById('compressFile').files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_BASE}/api/pdf/compress`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${getToken()}`
+                    },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Compress failed');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                document.getElementById('toolResult').innerHTML = `<a href="${url}" download="compressed.pdf" class="btn btn-success"><i class="bi bi-download"></i> Download Compressed PDF</a>`;
+            } catch (err) {
+                showAlert(err.message || 'Compress failed');
+            }
+        };
+
+        // --- OCR (Extract Text) ---
+        document.getElementById('ocrForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const file = document.getElementById('ocrFile').files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_BASE}/api/pdf/ocr`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${getToken()}`
+                    },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('OCR failed');
+                const data = await res.json();
+                document.getElementById('toolResult').innerHTML = `<pre class="bg-light p-3">${data.text || 'No text found.'}</pre>`;
+            } catch (err) {
+                showAlert(err.message || 'OCR failed');
+            }
+        };
+
+        // --- Image to PDF ---
+        document.getElementById('img2pdfForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const files = document.getElementById('img2pdfFiles').files;
+            if (!files.length) return;
+            const formData = new FormData();
+            for (const file of files) formData.append('files', file);
+            try {
+                const res = await fetch(`${API_BASE}/api/pdf/image-to-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${getToken()}`
+                    },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Image to PDF failed');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                document.getElementById('toolResult').innerHTML = `<a href="${url}" download="images.pdf" class="btn btn-success"><i class="bi bi-download"></i> Download PDF</a>`;
+            } catch (err) {
+                showAlert(err.message || 'Image to PDF failed');
+            }
+        };
+    </script>
+</body>
+
+</html>
