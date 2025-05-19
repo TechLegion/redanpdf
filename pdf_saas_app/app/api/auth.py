@@ -4,15 +4,15 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 
-from app.db.session import get_db
-from app.db.models import User
-from app.services.auth_services import (
+from pdf_saas_app.app.db.session import get_db
+from pdf_saas_app.app.db.models import User
+from pdf_saas_app.app.services.auth_services import (
     authenticate_user,
     create_access_token,
     get_password_hash,
     get_current_active_user
 )
-from app.config import settings
+from pdf_saas_app.app.config import settings
 
 router = APIRouter()
 

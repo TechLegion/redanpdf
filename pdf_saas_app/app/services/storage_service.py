@@ -4,7 +4,7 @@ import uuid
 from typing import BinaryIO, Optional
 import boto3
 from azure.storage.blob import BlobServiceClient
-from app.config import settings
+from pdf_saas_app.app.config import settings
 
 class StorageService:
     """Service for handling file storage operations"""

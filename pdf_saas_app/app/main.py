@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
 
-from app.api import auth, documents, ai_chat
-from app.db.session import engine, Base
-from app.config import settings
+from pdf_saas_app.app.api import auth, documents, ai_chat
+from pdf_saas_app.app.db.session import engine, Base
+from pdf_saas_app.app.config import settings
 
 # Create database tables if they don't exist
 Base.metadata.create_all(bind=engine)
@@ -61,4 +61,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("pdf_saas_app.app.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 
-from app.db.session import Base
+from pdf_saas_app.app.db.session import Base
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -23,7 +23,7 @@ class Document(Base):
     __tablename__ = "documents"
     
     id = Column(String, primary_key=True, index=True, default=generate_uuid)
-    filename = Column(String)
+    filename = Column(String, nullable=False)
     file_path = Column(String)  # URL or path to stored file
     file_size = Column(Integer)  # Size in bytes
     mime_type = Column(String)

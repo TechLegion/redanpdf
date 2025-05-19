@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.db.models import PDF
+from pdf_saas_app.app.db.models import PDF
 import os
 
 PDF_STORAGE_DIR = os.path.join(os.path.dirname(__file__), '../static/pdfs')
