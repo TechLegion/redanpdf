@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session
 from typing import Dict, Optional
 from pydantic import BaseModel
 
-from app.db.session import get_db
-from app.db.models import User, Document, ChatHistory
-from app.services.auth_services import get_current_active_user
-from app.services.llm_service import AIService
+from pdf_saas_app.app.db.session import get_db
+from pdf_saas_app.app.db.models import User, Document, ChatHistory
+from pdf_saas_app.app.services.auth_services import get_current_active_user
+from pdf_saas_app.app.services.llm_service import AIService
 
 router = APIRouter()
 ai_service = AIService()
