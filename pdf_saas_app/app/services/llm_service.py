@@ -16,7 +16,7 @@ class AIService:
         self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
         self.pdf_processor = PDFProcessor()
     
-    async def generate_chat_response(self, user_query: str, context: Optional[str] = None) -> str:
+    def generate_chat_response(self, user_query: str, context: Optional[str] = None) -> str:
         """
         Generate an AI response to a user query about a PDF
         
@@ -40,14 +40,14 @@ class AIService:
         
         messages.append({"role": "user", "content": user_query})
         
-        response = await self.client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model="gpt-4",
             messages=messages
         )
         
         return response.choices[0].message.content
     
-    async def summarize_document(self, text_content: str, max_length: int = 1000) -> str:
+    def summarize_document(self, text_content: str, max_length: int = 1000) -> str:
         """
         Summarize document content using LangChain
         
@@ -78,7 +78,7 @@ class AIService:
         
         return summary
     
-    async def check_grammar(self, text: str) -> Dict[str, Any]:
+    def check_grammar(self, text: str) -> Dict[str, Any]:
         """
         Check grammar and spelling in text
         
@@ -101,13 +101,12 @@ class AIService:
         }
         """
         
-        response = await self.client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
-            ],
-            response_format={"type": "json_object"}
+            ]
         )
         
         try:

@@ -73,3 +73,23 @@ Desktop.ini
 # Frontend build
 pdf_saas_app/frontend/node_modules/
 pdf_saas_app/frontend/dist/ 
+storage/
+
+# PyCharm
+.idea/
+
+# Alembic migration cache
+alembic/versions/*.pyc
+
+# Logs
+*.log
+
+# Database
+*.sqlite3
+*.db
+
+# Test output and backups
+test-results/
+*.bak
+*.swp
+*~

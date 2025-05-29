@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     AZURE_CONTAINER_NAME: Optional[str] = None
     LOCAL_STORAGE_PATH: str = "storage"
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+    FRONTEND_URL: str = "http://localhost:5500/pdf_saas_app/frontend/index.html"  # Optional, for redirect
+    EXTRA: str = "allow"
+
     @field_validator("SQLALCHEMY_DATABASE_URI", mode="before")
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
@@ -44,7 +51,7 @@ class Settings(BaseSettings):
             path=f"{values.data.get('POSTGRES_DB') or ''}",
         )
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="allow")
 
 
 settings = Settings()

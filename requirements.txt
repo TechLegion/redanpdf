@@ -43,3 +43,6 @@ numpy
 pydantic-core
 setuptools
 wheel
+authlib
+itsdangerous
+jinja2

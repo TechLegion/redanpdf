@@ -1,14 +1,16 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
+from jose import jwt, JWTError
 
 from pdf_saas_app.app.db.session import get_db
 from pdf_saas_app.app.db.models import User
 from pdf_saas_app.app.services.auth_services import (
     authenticate_user,
     create_access_token,
+    create_refresh_token,
     get_password_hash,
     get_current_active_user
 )
@@ -18,6 +20,7 @@ router = APIRouter()
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 class UserCreate(BaseModel):
@@ -49,8 +52,13 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.id}, expires_delta=access_token_expires
     )
+    refresh_token = create_refresh_token(data={"sub": user.id})
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
 
 @router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):

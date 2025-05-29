@@ -2,10 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
-
-from pdf_saas_app.app.api import auth, documents, ai_chat
+from pdf_saas_app.app.api import auth, documents, ai_chat, auth_google
 from pdf_saas_app.app.db.session import engine, Base
 from pdf_saas_app.app.config import settings
+from starlette.middleware.sessions import SessionMiddleware
 
 # Create database tables if they don't exist
 Base.metadata.create_all(bind=engine)
@@ -29,6 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY
+)
+
 # Include routers
 app.include_router(
     auth.router,
@@ -48,11 +53,13 @@ app.include_router(
     tags=["ai"]
 )
 
+app.include_router(auth_google.router, prefix="/api/v1/auth")
+
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to PDF SaaS API",
-        "documentation": "/docs",
+        "message": "Welcome to PDF SaaS API, Currently Redanpdf",
+        "View the documentation at": "/docs",
     }
 
 @app.get("/health")

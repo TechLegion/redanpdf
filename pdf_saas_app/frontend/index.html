@@ -4,274 +4,1206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | PDF SaaS App</title>
-    <link rel="stylesheet" href="assets/bootstrap.min.css">
-    <link rel="stylesheet" href="assets/style.css">
-    <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c4.svg">
+    <title>PDF API Testing Interface</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+         :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin: 2rem auto;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0px, rgba(255, 255, 255, 0.1) 1px, transparent 1px, transparent 20px);
+            animation: shimmer 3s linear infinite;
+        }
+        
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%) translateY(-100%) rotate(45deg);
+            }
+            100% {
+                transform: translateX(100%) translateY(100%) rotate(45deg);
+            }
+        }
+        
+        .header h1 {
+            position: relative;
+            z-index: 2;
+            margin: 0;
+            font-weight: 700;
+            font-size: 2.5rem;
+        }
+        
+        .header p {
+            position: relative;
+            z-index: 2;
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .auth-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 3;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .feature-card.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+        }
+        
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        
+        .icon-upload {
+            background: var(--success-gradient);
+        }
+        
+        .icon-summarize {
+            background: var(--primary-gradient);
+        }
+        
+        .icon-grammar {
+            background: var(--danger-gradient);
+        }
+        
+        .icon-chat {
+            background: var(--dark-gradient);
+        }
+        
+        .btn-custom {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.6);
+            color: white;
+        }
+        
+        .btn-custom:disabled {
+            opacity: 0.7;
+            background: #ccc;
+            box-shadow: none;
+            transform: none;
+        }
+        
+        .file-drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 3rem;
+            text-align: center;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .file-drop-zone:hover {
+            background: linear-gradient(135deg, #e8ebff 0%, #d0d8ff 100%);
+            border-color: #5a67d8;
+        }
+        
+        .file-drop-zone.dragover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: white;
+        }
+        
+        .response-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            border-left: 4px solid #667eea;
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .spinner-border-custom {
+            width: 3rem;
+            height: 3rem;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top-color: #667eea;
+        }
+        
+        .chat-messages {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            background: white;
+        }
+        
+        .chat-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 10px;
+        }
+        
+        .chat-message.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: 2rem;
+        }
+        
+        .chat-message.bot {
+            background: #f8f9fa;
+            color: #333;
+            margin-right: 2rem;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .nav-tabs .nav-link {
+            color: #667eea;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            font-weight: 600;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: var(--primary-gradient);
+            color: white;
+        }
+        
+        .tab-content {
+            background: white;
+            border-radius: 0 0 15px 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress-custom {
+            height: 8px;
+            border-radius: 10px;
+            background: rgba(102, 126, 234, 0.2);
+        }
+        
+        .progress-bar-custom {
+            background: var(--primary-gradient);
+            border-radius: 10px;
+        }
+        
+        .pre-wrap {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .correction-item {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .download-btn {
+            margin-top: 1rem;
+        }
+        
+        .file-upload-progress {
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+    </style>
 </head>
 
 <body>
-    <nav class="navbar navbar-light bg-white shadow-sm">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#"><span style="font-size:1.5rem;">📄</span> PDF SaaS App</a>
-            <button class="btn btn-outline-danger ms-auto" id="logoutBtn">Logout</button>
-        </div>
-    </nav>
-    <div class="container-fluid">
-        <div class="row">
-            <aside class="col-md-3 col-lg-2 sidebar d-none d-md-block">
-                <nav class="nav flex-column mt-4">
-                    <a class="nav-link active" id="nav-dashboard" href="#">Dashboard</a>
-                    <a class="nav-link" id="nav-upload" href="#upload">Upload PDF</a>
-                    <a class="nav-link" id="nav-tools" href="#tools">PDF Tools</a>
-                </nav>
-            </aside>
-            <main class="col-md-9 col-lg-10 py-4">
-                <div class="hero mb-4">
-                    <h2 class="fw-bold mb-1">Welcome to your PDF Dashboard</h2>
-                    <p class="mb-0">Manage, convert, and enhance your PDFs with ease.</p>
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loginModalLabel"><i class="fas fa-sign-in-alt me-2"></i>Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <section id="dashboard">
-                    <h4 class="mb-3">Your PDFs</h4>
-                    <div id="pdfList" class="row g-3 mb-4">
-                        <!-- PDF cards will be rendered here -->
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <small class="text-muted">Don't have an account? <a href="#" id="showRegisterLink">Register here</a></small>
                     </div>
-                </section>
-                <section id="upload" class="mb-5">
-                    <h4 class="mb-3">Upload PDF</h4>
-                    <form id="uploadForm" class="d-flex align-items-center gap-2 mb-4">
-                        <input type="file" class="form-control" id="pdfFile" accept="application/pdf" required>
-                        <button type="submit" class="btn btn-primary">Upload PDF</button>
+                    <div class="mb-3 text-center">
+                        <a href="http://localhost:8000/api/v1/auth/login/google" class="btn btn-light w-100" style="border:1px solid #ccc; box-shadow:0 2px 4px rgba(0,0,0,0.04); font-weight:600;">
+                            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" style="width:20px; margin-right:8px; vertical-align:middle;"> Sign in with Google
+                        </a>
+                        <div class="my-2 text-muted" style="font-size:0.9em;">or</div>
+                    </div>
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="loginEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <div class="alert alert-danger d-none" id="loginError"></div>
+                        <button type="submit" class="btn btn-custom w-100">Login</button>
                     </form>
-                </section>
-                <section id="tools">
-                    <h4 class="mb-3">PDF Tools</h4>
-                    <div class="row g-3">
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card p-3">
-                                <h5>Merge PDFs</h5>
-                                <form id="mergeForm">
-                                    <input type="file" class="form-control mb-2" id="mergeFiles" accept="application/pdf" multiple required>
-                                    <button type="submit" class="btn btn-primary w-100">Merge</button>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card p-3">
-                                <h5>Compress PDF</h5>
-                                <form id="compressForm">
-                                    <input type="file" class="form-control mb-2" id="compressFile" accept="application/pdf" required>
-                                    <button type="submit" class="btn btn-primary w-100">Compress</button>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card p-3">
-                                <h5>OCR (Extract Text)</h5>
-                                <form id="ocrForm">
-                                    <input type="file" class="form-control mb-2" id="ocrFile" accept="application/pdf" required>
-                                    <button type="submit" class="btn btn-primary w-100">Extract Text</button>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card p-3 mt-3">
-                                <h5>Image to PDF</h5>
-                                <form id="img2pdfForm">
-                                    <input type="file" class="form-control mb-2" id="img2pdfFiles" accept="image/*" multiple required>
-                                    <button type="submit" class="btn btn-primary w-100">Convert</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="toolResult" class="mt-4"></div>
-                </section>
-            </main>
+                </div>
+            </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.js"></script>
-    <script src="assets/bootstrap.bundle.min.js"></script>
-    <script src="assets/app.js"></script>
-    <script>
-        // --- Auth check ---
-        if (!getToken()) window.location.href = 'login.html';
 
-        // --- Logout ---
-        document.getElementById('logoutBtn').onclick = function() {
-            removeToken();
-            window.location.href = 'login.html';
+    <!-- Register Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="registerModalLabel"><i class="fas fa-user-plus me-2"></i>Register</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <small class="text-muted">Already have an account? <a href="#" id="showLoginLink">Login here</a></small>
+                    </div>
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="registerEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="registerEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" required>
+                        </div>
+                        <div class="alert alert-danger d-none" id="registerError"></div>
+                        <div class="alert alert-success d-none" id="registerSuccess"></div>
+                        <button type="submit" class="btn btn-custom w-100">Register</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- End Modals -->
+    <div class="container-fluid">
+        <div class="main-container">
+            <div class="header">
+                <div class="auth-status">
+                    <button class="btn btn-outline-light btn-sm" id="authBtn">Login</button>
+                </div>
+                <h1><i class="fas fa-file-pdf me-3"></i>PDF API Testing Suite</h1>
+                <p>Professional interface for testing PDF processing capabilities</p>
+            </div>
+
+            <div class="container-fluid p-4">
+                <!-- File Upload Section -->
+                <div class="feature-card">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <div class="feature-icon icon-upload">
+                                <i class="fas fa-upload"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-10">
+                            <h4>Upload PDF Document</h4>
+                            <p class="text-muted">Upload your PDF file to start testing various API features</p>
+                            <div class="file-drop-zone" id="dropZone">
+                                <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-primary"></i>
+                                <h5>Drop your PDF file here or click to browse</h5>
+                                <p class="text-muted">Supports PDF files up to 10MB</p>
+                                <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+                            </div>
+                            <div class="progress file-upload-progress" id="uploadProgress">
+                                <div class="progress-bar progress-bar-custom" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="mt-3" id="fileInfo" style="display: none;">
+                                <div class="alert alert-success d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <div>
+                                        <span id="fileName"></span> uploaded successfully
+                                        <button class="btn btn-sm btn-outline-primary ms-2" id="clearFileBtn">Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="error-message" id="fileError"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced PDF Features UI -->
+                <div class="feature-card">
+                    <h4><i class="fas fa-tools me-2"></i>Advanced PDF Operations</h4>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Your Documents</label>
+                            <select class="form-select" id="documentList">
+                                <option value="">Select a document</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Select Documents for Merge</label>
+                            <select class="form-select" id="mergeDocumentList" multiple>
+                                <option value="">No documents available</option>
+                            </select>
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <button type="button" class="btn btn-custom w-100" id="btnCompress"><i class="fas fa-compress me-2"></i>Compress</button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <input type="text" class="form-control mb-2" id="watermarkText" placeholder="Watermark text">
+                            <button type="button" class="btn btn-custom w-100" id="btnWatermark"><i class="fas fa-tint me-2"></i>Watermark</button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <input type="text" class="form-control mb-2" id="mergeFilename" placeholder="Merged filename (optional)">
+                            <button type="button" class="btn btn-custom w-100" id="btnMerge"><i class="fas fa-layer-group me-2"></i>Merge</button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <input type="file" class="form-control mb-2" id="imageToPdfInput" accept="image/*" multiple>
+                            <button type="button" class="btn btn-custom w-100" id="btnImageToPdf"><i class="fas fa-images me-2"></i>Images to PDF</button>
+                        </div>
+                    </div>
+                    <div class="mt-3" id="advancedFeatureResponse"></div>
+                </div>
+
+                <!-- Feature Tabs -->
+                <ul class="nav nav-tabs" id="featureTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="summarize-tab" data-bs-toggle="tab" data-bs-target="#summarize" type="button" role="tab">
+                            <i class="fas fa-compress-alt me-2"></i>Summarize
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="grammar-tab" data-bs-toggle="tab" data-bs-target="#grammar" type="button" role="tab">
+                            <i class="fas fa-spell-check me-2"></i>Grammar Check
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button" role="tab">
+                            <i class="fas fa-comments me-2"></i>Chat with PDF
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="extract-tab" data-bs-toggle="tab" data-bs-target="#extract" type="button" role="tab">
+                            <i class="fas fa-file-alt me-2"></i>Extract Text
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="featureTabContent">
+                    <!-- Summarize Tab -->
+                    <div class="tab-pane fade show active" id="summarize" role="tabpanel">
+                        <h4><i class="fas fa-compress-alt me-2"></i>PDF Summarization</h4>
+                        <p class="text-muted">Generate intelligent summaries of your PDF content</p>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Summary Length</label>
+                                <select class="form-select" id="summaryLength">
+                                    <option value="400">Short (1-2 paragraphs)</option>
+                                    <option value="1000" selected>Medium (3-5 paragraphs)</option>
+                                    <option value="2000">Long (6+ paragraphs)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Focus Area</label>
+                                <select class="form-select" id="summaryFocus">
+                                    <option value="general" selected>General Summary</option>
+                                    <option value="key-points">Key Points</option>
+                                    <option value="conclusions">Conclusions</option>
+                                    <option value="methodology">Methodology</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-custom mt-3" id="summarizeBtn">
+                            <i class="fas fa-magic me-2"></i>Generate Summary
+                        </button>
+
+                        <div class="loading-spinner" id="summarizeLoading">
+                            <div class="spinner-border spinner-border-custom" role="status"></div>
+                            <p class="mt-2">Analyzing PDF content...</p>
+                        </div>
+
+                        <div class="response-container" id="summarizeResponse" style="display: none;"></div>
+                    </div>
+
+                    <!-- Grammar Check Tab -->
+                    <div class="tab-pane fade" id="grammar" role="tabpanel">
+                        <h4><i class="fas fa-spell-check me-2"></i>Grammar & Style Check</h4>
+                        <p class="text-muted">Analyze and improve the grammar and style of your PDF content</p>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Check Type</label>
+                                <select class="form-select" id="grammarType">
+                                    <option value="grammar" selected>Grammar Only</option>
+                                    <option value="style">Style & Readability</option>
+                                    <option value="comprehensive">Comprehensive Check</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Language</label>
+                                <select class="form-select" id="grammarLanguage">
+                                    <option value="en" selected>English</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-custom mt-3" id="grammarCheckBtn">
+                            <i class="fas fa-search me-2"></i>Check Grammar
+                        </button>
+
+                        <div class="loading-spinner" id="grammarLoading">
+                            <div class="spinner-border spinner-border-custom" role="status"></div>
+                            <p class="mt-2">Analyzing grammar and style...</p>
+                        </div>
+
+                        <div class="response-container" id="grammarResponse" style="display: none;"></div>
+                    </div>
+
+                    <!-- Chat Tab -->
+                    <div class="tab-pane fade" id="chat" role="tabpanel">
+                        <h4><i class="fas fa-comments me-2"></i>Chat with Your PDF</h4>
+                        <p class="text-muted">Ask questions about your PDF content and get intelligent responses</p>
+
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-robot fa-2x mb-2"></i>
+                                <p>Upload a PDF and start asking questions!</p>
+                            </div>
+                        </div>
+
+                        <div class="input-group mt-3">
+                            <input type="text" class="form-control" id="chatInput" placeholder="Ask a question about your PDF...">
+                            <button class="btn btn-custom" id="sendChatBtn">
+                                <i class="fas fa-paper-plane me-2"></i>Send
+                            </button>
+                        </div>
+
+                        <div class="loading-spinner" id="chatLoading">
+                            <div class="spinner-border spinner-border-custom" role="status"></div>
+                            <p class="mt-2">Thinking...</p>
+                        </div>
+                    </div>
+
+                    <!-- Extract Text Tab -->
+                    <div class="tab-pane fade" id="extract" role="tabpanel">
+                        <h4><i class="fas fa-file-alt me-2"></i>Extract Text Content</h4>
+                        <p class="text-muted">Extract and format text content from your PDF</p>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Output Format</label>
+                                <select class="form-select" id="extractFormat">
+                                    <option value="plain" selected>Plain Text</option>
+                                    <option value="markdown">Markdown</option>
+                                    <option value="json">JSON Structure</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Page Range</label>
+                                <input type="text" class="form-control" id="pageRange" placeholder="e.g., 1-5 or leave empty for all">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-custom mt-3" id="extractTextBtn">
+                            <i class="fas fa-download me-2"></i>Extract Text
+                        </button>
+
+                        <div class="loading-spinner" id="extractLoading">
+                            <div class="spinner-border spinner-border-custom" role="status"></div>
+                            <p class="mt-2">Extracting text content...</p>
+                        </div>
+
+                        <div class="response-container" id="extractResponse" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let uploadedFile = null;
+        let uploadedDocumentId = null;
+        let chatHistory = [];
+        let jwtToken = null;
+        let currentUser = null;
+        const API_BASE_URL = 'http://localhost:8000/api/v1';
+
+        // DOM Elements
+        const elements = {
+            authBtn: document.getElementById('authBtn'),
+            loginModal: document.getElementById('loginModal'),
+            registerModal: document.getElementById('registerModal'),
+            loginForm: document.getElementById('loginForm'),
+            registerForm: document.getElementById('registerForm'),
+            showRegisterLink: document.getElementById('showRegisterLink'),
+            showLoginLink: document.getElementById('showLoginLink'),
+            dropZone: document.getElementById('dropZone'),
+            fileInput: document.getElementById('fileInput'),
+            uploadProgress: document.getElementById('uploadProgress'),
+            fileError: document.getElementById('fileError')
         };
 
-        // --- List PDFs ---
-        async function listPDFs() {
-            const pdfList = document.getElementById('pdfList');
-            pdfList.innerHTML = '';
-            try {
-                const res = await fetch(`${API_BASE}/api/pdf/list`, {
-                    headers: {
-                        Authorization: `Bearer ${getToken()}`
-                    }
-                });
-                if (!res.ok) throw new Error('Failed to fetch PDFs');
-                const data = await res.json();
-                if (!data.length) {
-                    pdfList.innerHTML = '<div class="col-12 text-center text-muted">No PDFs uploaded yet.</div>';
-                    return;
-                }
-                data.forEach(pdf => {
-                    const card = document.createElement('div');
-                    card.className = 'col-md-6 col-lg-4';
-                    card.innerHTML = `
-            <div class="card h-100 p-3">
-              <h6 class="fw-bold mb-2"><i class="bi bi-file-earmark-pdf text-danger"></i> ${pdf.filename}</h6>
-              <div class="d-flex gap-2 mt-2">
-                <a href="${API_BASE}/api/pdf/download/${pdf.id}" class="btn btn-sm btn-success" target="_blank"><i class="bi bi-download"></i> Download</a>
-                <button class="btn btn-sm btn-danger" onclick="deletePDF('${pdf.id}')"><i class="bi bi-trash"></i> Delete</button>
-              </div>
-            </div>
-          `;
-                    pdfList.appendChild(card);
-                });
-            } catch (err) {
-                showAlert(err.message || 'Error loading PDFs');
+        // Authentication Management
+        function saveToken(token) {
+            jwtToken = token;
+            localStorage.setItem('jwtToken', token);
+            console.log('Token saved to localStorage');
+        }
+
+        function clearToken() {
+            jwtToken = null;
+            localStorage.removeItem('jwtToken');
+            currentUser = null;
+            updateAuthUI();
+        }
+
+        function isAuthenticated() {
+            return !!jwtToken;
+        }
+
+        function updateAuthUI() {
+            if (isAuthenticated() && currentUser) {
+                elements.authBtn.innerHTML = `<i class="fas fa-user me-2"></i>${currentUser.email} <button class="btn btn-sm btn-outline-light ms-2" onclick="logout()">Logout</button>`;
+            } else {
+                elements.authBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+                elements.authBtn.onclick = showLoginModal;
             }
         }
-        window.listPDFs = listPDFs;
-        listPDFs();
 
-        // --- Delete PDF ---
-        window.deletePDF = async function(id) {
-            if (!confirm('Delete this PDF?')) return;
+        function showLoginModal() {
+            const modal = new bootstrap.Modal(elements.loginModal);
+            modal.show();
+        }
+
+        function showRegisterModal() {
+            const modal = new bootstrap.Modal(elements.registerModal);
+            modal.show();
+        }
+
+        function hideModals() {
+            const modals = [elements.loginModal, elements.registerModal];
+            modals.forEach(modal => {
+                const instance = bootstrap.Modal.getInstance(modal);
+                if (instance) instance.hide();
+            });
+        }
+
+        async function logout() {
+            clearToken();
+            location.reload();
+        }
+
+        // API Helper Functions
+        async function callAPI(endpoint, data = null, method = 'POST', isForm = false) {
+            const headers = {};
+            // Always get token from memory or localStorage
+            const token = jwtToken || localStorage.getItem('jwtToken');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            if (!isForm && data) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            const config = {
+                method,
+                headers
+            };
+
+            if (data && method !== 'GET') {
+                config.body = isForm ? data : JSON.stringify(data);
+            }
+
+            // Log request details for backend debugging
+            console.log('[callAPI]', {
+                endpoint,
+                method,
+                headers,
+                isForm,
+                data,
+                jwtToken,
+                localStorageToken: localStorage.getItem('jwtToken')
+            });
             try {
-                const res = await fetch(`${API_BASE}/api/pdf/delete/${id}`, {
-                    method: 'DELETE',
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+                if (response.status === 401) {
+                    console.error('[callAPI] 401 Unauthorized. Token:', token);
+                    clearToken();
+                    showLoginModal();
+                    alert('You have been logged out due to authentication error.');
+                    throw new Error('Authentication required');
+                }
+
+                // Handle different content types
+                const contentType = response.headers.get('content-type');
+                let result;
+
+                if (contentType && contentType.includes('application/json')) {
+                    result = await response.json();
+                } else {
+                    result = {
+                        message: await response.text()
+                    };
+                }
+
+                if (!response.ok) {
+                    // Log backend error details
+                    console.error('[callAPI] API Error:', result, 'Status:', response.status);
+                    alert('API Error: ' + (result.detail || result.message || 'API request failed'));
+                    throw new Error(result.detail || result.message || 'API request failed');
+                }
+
+                return result;
+            } catch (error) {
+                console.error('[callAPI] Exception:', error);
+                alert('API Exception: ' + error.message);
+                throw error;
+            }
+        }
+
+        // Authentication Handlers
+        elements.loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+
+            errorEl.classList.add('d-none');
+            errorEl.textContent = '';
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', email);
+                formData.append('password', password);
+
+                const response = await fetch(`${API_BASE_URL}/auth/token`, {
+                    method: 'POST',
                     headers: {
-                        Authorization: `Bearer ${getToken()}`
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Login failed');
+                }
+                saveToken(result.access_token);
+                currentUser = {
+                    email
+                };
+                updateAuthUI();
+                hideModals();
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('d-none');
+            }
+        });
+
+        elements.registerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorEl = document.getElementById('registerError');
+            const successEl = document.getElementById('registerSuccess');
+            errorEl.classList.add('d-none');
+            errorEl.textContent = '';
+            successEl.classList.add('d-none');
+            successEl.textContent = '';
+            if (password !== confirmPassword) {
+                errorEl.textContent = 'Passwords do not match.';
+                errorEl.classList.remove('d-none');
+                return;
+            }
+            try {
+                const data = {
+                    email,
+                    password
+                };
+                const result = await callAPI('/auth/register', data, 'POST');
+                successEl.textContent = 'Registration successful! Please login.';
+                successEl.classList.remove('d-none');
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('d-none');
+            }
+        });
+
+        elements.showRegisterLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            hideModals();
+            showRegisterModal();
+        });
+        elements.showLoginLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            hideModals();
+            showLoginModal();
+        });
+
+        // File Upload Logic
+        elements.dropZone.addEventListener('click', () => elements.fileInput.click());
+        elements.fileInput.addEventListener('change', handleFileSelect);
+        elements.dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            elements.dropZone.classList.add('dragover');
+        });
+        elements.dropZone.addEventListener('dragleave', e => {
+            e.preventDefault();
+            elements.dropZone.classList.remove('dragover');
+        });
+        elements.dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            elements.dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                elements.fileInput.files = e.dataTransfer.files;
+                handleFileSelect();
+            }
+        });
+
+        function handleFileSelect() {
+            const file = elements.fileInput.files[0];
+            const errorEl = document.getElementById('fileError');
+            errorEl.textContent = '';
+            if (!file) return;
+            if (file.type !== 'application/pdf') {
+                errorEl.textContent = 'Only PDF files are allowed.';
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                errorEl.textContent = 'File size exceeds 10MB.';
+                return;
+            }
+            uploadPDF(file);
+        }
+
+        async function uploadPDF(file) {
+            const progressBar = elements.uploadProgress.querySelector('.progress-bar');
+            elements.uploadProgress.style.display = 'block';
+            progressBar.style.width = '0%';
+            const formData = new FormData();
+            formData.append('file', file);
+            // Always get token from memory or localStorage
+            const token = jwtToken || localStorage.getItem('jwtToken');
+            console.log('[uploadPDF] jwtToken:', jwtToken, 'localStorage:', localStorage.getItem('jwtToken'), 'file:', file);
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+                    method: 'POST',
+                    headers: token ? {
+                        'Authorization': `Bearer ${token}`
+                    } : {},
+                    body: formData
+                });
+                if (!response.ok) {
+                    let errorMsg = 'Upload failed';
+                    try {
+                        const errJson = await response.json();
+                        errorMsg = errJson.detail || errJson.message || errorMsg;
+                        console.error('[uploadPDF] Backend error:', errJson);
+                        alert('Upload Error: ' + errorMsg);
+                    } catch (e) {
+                        // Not JSON
+                        const errText = await response.text();
+                        errorMsg = errText || errorMsg;
+                        console.error('[uploadPDF] Backend error (text):', errText);
+                        alert('Upload Error: ' + errorMsg);
                     }
-                });
-                if (!res.ok) throw new Error('Delete failed');
-                listPDFs();
+                    throw new Error(errorMsg);
+                }
+                const result = await response.json();
+                uploadedFile = file;
+                uploadedDocumentId = result.id;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileInfo').style.display = 'block';
+                elements.uploadProgress.style.display = 'none';
+                // Log after upload
+                console.log('[uploadPDF] After upload, jwtToken:', jwtToken, 'localStorage:', localStorage.getItem('jwtToken'));
+                loadDocumentList();
             } catch (err) {
-                showAlert(err.message || 'Delete failed');
+                elements.fileError.textContent = err.message;
+                elements.uploadProgress.style.display = 'none';
+                // Log error for backend debugging
+                console.error('[uploadPDF] Exception:', err);
             }
-        };
+        }
+        document.getElementById('clearFileBtn').addEventListener('click', function() {
+            uploadedFile = null;
+            uploadedDocumentId = null;
+            elements.fileInput.value = '';
+            document.getElementById('fileInfo').style.display = 'none';
+        });
 
-        // --- Upload PDF ---
-        document.getElementById('uploadForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const file = document.getElementById('pdfFile').files[0];
-            if (!file) return;
-            const formData = new FormData();
-            formData.append('file', file);
+        // Document List
+        async function loadDocumentList() {
+            // Log before loading document list
+            console.log('[loadDocumentList] jwtToken:', jwtToken, 'localStorage:', localStorage.getItem('jwtToken'));
             try {
-                const res = await fetch(`${API_BASE}/api/pdf/upload`, {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${getToken()}`
-                    },
-                    body: formData
+                const docs = await callAPI('/documents/list', null, 'GET');
+                window._lastDocsList = docs; // Save for download button
+                const docList = document.getElementById('documentList');
+                const mergeList = document.getElementById('mergeDocumentList');
+                docList.innerHTML = '<option value="">Select a document</option>';
+                mergeList.innerHTML = '';
+                docs.forEach(doc => {
+                    const opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.textContent = doc.filename;
+                    docList.appendChild(opt);
+                    const mergeOpt = opt.cloneNode(true);
+                    mergeList.appendChild(mergeOpt);
                 });
-                if (!res.ok) throw new Error('Upload failed');
-                listPDFs();
+                updateDownloadButton();
+                docList.onchange = updateDownloadButton;
             } catch (err) {
-                showAlert(err.message || 'Upload failed');
+                // Log error for backend debugging
+                console.error('[loadDocumentList] Exception:', err);
             }
-        };
+        }
 
-        // --- Merge PDFs ---
-        document.getElementById('mergeForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const files = document.getElementById('mergeFiles').files;
+        function updateDownloadButton() {
+            const docId = document.getElementById('documentList').value;
+            const docs = window._lastDocsList || [];
+            const doc = docs.find(d => d.id === docId);
+            const downloadDiv = document.getElementById('downloadSelectedDoc');
+            if (docId && doc) {
+                downloadDiv.innerHTML = `<button class="btn btn-success" id="downloadDocBtn">Download ${doc.filename}</button>`;
+                document.getElementById('downloadDocBtn').onclick = async function() {
+                    const token = jwtToken || localStorage.getItem('jwtToken');
+                    const response = await fetch(`${API_BASE_URL}/documents/${docId}`, {
+                        headers: token ? {
+                            'Authorization': `Bearer ${token}`
+                        } : {}
+                    });
+                    if (!response.ok) {
+                        alert('Failed to download document: ' + response.statusText);
+                        return;
+                    }
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = doc.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                };
+            } else {
+                downloadDiv.innerHTML = '';
+            }
+        }
+
+        // Advanced PDF Operations
+        document.getElementById('btnCompress').addEventListener('click', async function() {
+            const docId = document.getElementById('documentList').value;
+            if (!docId) return;
+            setFeatureLoading('advancedFeatureResponse', true);
+            try {
+                const result = await callAPI(`/documents/${docId}/compress`, null, 'POST');
+                setFeatureResponse('advancedFeatureResponse', 'Compressed PDF ready for download.', result.file_path);
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
+        document.getElementById('btnWatermark').addEventListener('click', async function() {
+            const docId = document.getElementById('documentList').value;
+            const text = document.getElementById('watermarkText').value;
+            if (!docId || !text) return;
+            setFeatureLoading('advancedFeatureResponse', true);
+            try {
+                const formData = new FormData();
+                formData.append('watermark_text', text);
+                const result = await callAPI(`/documents/${docId}/watermark`, formData, 'POST', true);
+                setFeatureResponse('advancedFeatureResponse', 'Watermarked PDF ready for download.', result.file_path);
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
+        document.getElementById('btnMerge').addEventListener('click', async function() {
+            const selected = Array.from(document.getElementById('mergeDocumentList').selectedOptions).map(opt => opt.value);
+            const filename = document.getElementById('mergeFilename').value;
+            if (!selected.length) return;
+            setFeatureLoading('advancedFeatureResponse', true);
+            try {
+                const formData = new FormData();
+                selected.forEach(id => formData.append('document_ids', id));
+                if (filename) formData.append('output_filename', filename);
+                const result = await callAPI('/documents/merge', formData, 'POST', true);
+                setFeatureResponse('advancedFeatureResponse', 'Merged PDF ready for download.', result.file_path);
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
+        document.getElementById('btnImageToPdf').addEventListener('click', async function() {
+            const files = document.getElementById('imageToPdfInput').files;
             if (!files.length) return;
+            setFeatureLoading('advancedFeatureResponse', true);
             const formData = new FormData();
-            for (const file of files) formData.append('files', file);
+            for (let file of files) formData.append('files', file);
             try {
-                const res = await fetch(`${API_BASE}/api/pdf/merge`, {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${getToken()}`
-                    },
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Merge failed');
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                document.getElementById('toolResult').innerHTML = `<a href="${url}" download="merged.pdf" class="btn btn-success"><i class="bi bi-download"></i> Download Merged PDF</a>`;
+                const result = await callAPI('/documents/image-to-pdf', formData, 'POST', true);
+                setFeatureResponse('advancedFeatureResponse', 'Images converted to PDF.', result.file_path);
             } catch (err) {
-                showAlert(err.message || 'Merge failed');
+                setFeatureResponse('advancedFeatureResponse', err.message);
             }
-        };
+        });
 
-        // --- Compress PDF ---
-        document.getElementById('compressForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const file = document.getElementById('compressFile').files[0];
-            if (!file) return;
-            const formData = new FormData();
-            formData.append('file', file);
-            try {
-                const res = await fetch(`${API_BASE}/api/pdf/compress`, {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${getToken()}`
-                    },
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Compress failed');
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                document.getElementById('toolResult').innerHTML = `<a href="${url}" download="compressed.pdf" class="btn btn-success"><i class="bi bi-download"></i> Download Compressed PDF</a>`;
-            } catch (err) {
-                showAlert(err.message || 'Compress failed');
-            }
-        };
+        function setFeatureLoading(id, loading) {
+            const el = document.getElementById(id);
+            el.innerHTML = loading ? '<div class="text-center"><div class="spinner-border text-primary"></div></div>' : '';
+        }
 
-        // --- OCR (Extract Text) ---
-        document.getElementById('ocrForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const file = document.getElementById('ocrFile').files[0];
-            if (!file) return;
-            const formData = new FormData();
-            formData.append('file', file);
-            try {
-                const res = await fetch(`${API_BASE}/api/pdf/ocr`, {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${getToken()}`
-                    },
-                    body: formData
-                });
-                if (!res.ok) throw new Error('OCR failed');
-                const data = await res.json();
-                document.getElementById('toolResult').innerHTML = `<pre class="bg-light p-3">${data.text || 'No text found.'}</pre>`;
-            } catch (err) {
-                showAlert(err.message || 'OCR failed');
+        function setFeatureResponse(id, msg, urlOrObj) {
+            const el = document.getElementById(id);
+            let url = urlOrObj;
+            let filename = null;
+            if (urlOrObj && typeof urlOrObj === 'object') {
+                // Try to extract id and filename
+                if (urlOrObj.id && urlOrObj.filename) {
+                    url = `${API_BASE_URL}/documents/${urlOrObj.id}`;
+                    filename = urlOrObj.filename;
+                } else if (urlOrObj.file_path) {
+                    url = urlOrObj.file_path;
+                } else if (urlOrObj.download_url) {
+                    url = urlOrObj.download_url;
+                } else {
+                    url = null;
+                }
             }
-        };
+            if (url) {
+                el.innerHTML = `<div class='alert alert-success'>${msg} <a href='${url}' class='btn btn-sm btn-primary ms-2' target='_blank'>Download${filename ? ' ' + filename : ''}</a></div>`;
+            } else {
+                el.innerHTML = `<div class='alert alert-danger'>${msg}</div>`;
+            }
+        }
 
-        // --- Image to PDF ---
-        document.getElementById('img2pdfForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const files = document.getElementById('img2pdfFiles').files;
-            if (!files.length) return;
-            const formData = new FormData();
-            for (const file of files) formData.append('files', file);
+        // Summarize
+        document.getElementById('summarizeBtn').addEventListener('click', async function() {
+            const docId = document.getElementById('documentList').value;
+            const length = document.getElementById('summaryLength').value;
+            const focus = document.getElementById('summaryFocus').value;
+            if (!docId) return;
+            document.getElementById('summarizeLoading').style.display = 'block';
+            document.getElementById('summarizeResponse').style.display = 'none';
             try {
-                const res = await fetch(`${API_BASE}/api/pdf/image-to-pdf`, {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${getToken()}`
-                    },
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Image to PDF failed');
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                document.getElementById('toolResult').innerHTML = `<a href="${url}" download="images.pdf" class="btn btn-success"><i class="bi bi-download"></i> Download PDF</a>`;
+                const result = await callAPI(`/ai/summarize/${docId}`, {
+                    max_length: length
+                }, 'POST');
+                document.getElementById('summarizeResponse').textContent = result.summary;
+                document.getElementById('summarizeResponse').style.display = 'block';
             } catch (err) {
-                showAlert(err.message || 'Image to PDF failed');
+                document.getElementById('summarizeResponse').textContent = err.message;
+                document.getElementById('summarizeResponse').style.display = 'block';
+            } finally {
+                document.getElementById('summarizeLoading').style.display = 'none';
             }
-        };
+        });
+
+        // Grammar Check
+        document.getElementById('grammarCheckBtn').addEventListener('click', async function() {
+            const docId = document.getElementById('documentList').value;
+            if (!docId) return;
+            document.getElementById('grammarLoading').style.display = 'block';
+            document.getElementById('grammarResponse').style.display = 'none';
+            try {
+                const textResult = await callAPI(`/documents/${docId}/extract-text`, null, 'GET');
+                const result = await callAPI('/ai/grammar-check', {
+                    text: textResult.text
+                }, 'POST');
+                document.getElementById('grammarResponse').innerHTML = result.corrections.map(c => `<div class='correction-item'>${c}</div>`).join('');
+                document.getElementById('grammarResponse').style.display = 'block';
+            } catch (err) {
+                document.getElementById('grammarResponse').textContent = err.message;
+                document.getElementById('grammarResponse').style.display = 'block';
+            } finally {
+                document.getElementById('grammarLoading').style.display = 'none';
+            }
+        });
+
+        // Chat with PDF
+        document.getElementById('sendChatBtn').addEventListener('click', sendChat);
+        document.getElementById('chatInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') sendChat();
+        });
+        async function sendChat() {
+            const docId = document.getElementById('documentList').value;
+            const input = document.getElementById('chatInput');
+            const question = input.value.trim();
+            if (!docId || !question) return;
+            input.value = '';
+            chatHistory.push({
+                role: 'user',
+                content: question
+            });
+            renderChat();
+            document.getElementById('chatLoading').style.display = 'block';
+            try {
+                const result = await callAPI('/ai/chat', {
+                    query: question,
+                    document_id: docId
+                }, 'POST');
+                chatHistory.push({
+                    role: 'bot',
+                    content: result.response
+                });
+                renderChat();
+            } catch (err) {
+                chatHistory.push({
+                    role: 'bot',
+                    content: err.message
+                });
+                renderChat();
+            } finally {
+                document.getElementById('chatLoading').style.display = 'none';
+            }
+        }
+
+        function renderChat() {
+            const chatBox = document.getElementById('chatMessages');
+            chatBox.innerHTML = chatHistory.length === 0 ? `<div class='text-center text-muted'><i class='fas fa-robot fa-2x mb-2'></i><p>Upload a PDF and start asking questions!</p></div>` : chatHistory.map(msg => `<div class='chat-message ${msg.role}'>${msg.content}</div>`).join('');
+        }
+
+        // Extract Text
+        document.getElementById('extractTextBtn').addEventListener('click', async function() {
+            const docId = document.getElementById('documentList').value;
+            if (!docId) return;
+            document.getElementById('extractLoading').style.display = 'block';
+            document.getElementById('extractResponse').style.display = 'none';
+            try {
+                const result = await callAPI(`/documents/${docId}/extract-text`, null, 'GET');
+                document.getElementById('extractResponse').textContent = result.text || JSON.stringify(result, null, 2);
+                document.getElementById('extractResponse').style.display = 'block';
+            } catch (err) {
+                document.getElementById('extractResponse').textContent = err.message;
+                document.getElementById('extractResponse').style.display = 'block';
+            } finally {
+                document.getElementById('extractLoading').style.display = 'none';
+            }
+        });
+
+        // On page load, restore token from localStorage
+        jwtToken = localStorage.getItem('jwtToken');
+        // Optionally, fetch user info if token exists
+        if (jwtToken) {
+            // Try to get user info from backend (optional, if you have /auth/me or similar)
+            callAPI('/auth/me', null, 'GET').then(user => {
+                currentUser = user;
+                updateAuthUI();
+            }).catch(() => {
+                clearToken();
+            });
+        } else {
+            updateAuthUI();
+        }
+
+        // Add the download button container to the DOM after the documentList select
+        window.addEventListener('DOMContentLoaded', function() {
+            const docList = document.getElementById('documentList');
+            if (docList) {
+                const downloadDiv = document.createElement('div');
+                downloadDiv.id = 'downloadSelectedDoc';
+                downloadDiv.style.marginTop = '10px';
+                docList.parentNode.appendChild(downloadDiv);
+            }
+        });
+
+        // On page load, check for ?token=... in the URL and store it in localStorage
+        (function() {
+            const url = new URL(window.location.href);
+            const token = url.searchParams.get('token');
+            if (token) {
+                localStorage.setItem('jwtToken', token);
+                // Remove token from URL for cleanliness
+                url.searchParams.delete('token');
+                window.history.replaceState({}, document.title, url.pathname + url.search);
+                // Optionally reload or update UI
+                location.reload();
+            }
+        })();
     </script>
 </body>
 

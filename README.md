@@ -105,4 +105,4 @@ python -m app.main
 ---
 
 ## License
-MIT 
+MIT

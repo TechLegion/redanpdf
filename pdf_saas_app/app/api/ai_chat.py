@@ -58,7 +58,7 @@ async def chat_with_pdf(
         context = document.text_content
     
     # Generate AI response
-    response = await ai_service.generate_chat_response(chat_request.query, context)
+    response = ai_service.generate_chat_response(chat_request.query, context)
     
     # Save chat history if a document was referenced
     conversation_id = None
@@ -109,7 +109,7 @@ async def summarize_document(
         )
     
     # Generate summary
-    summary = await ai_service.summarize_document(document.text_content, max_length)
+    summary = ai_service.summarize_document(document.text_content, max_length)
     
     return {"summary": summary}
 
@@ -121,5 +121,5 @@ async def check_grammar(
     """
     Check grammar and spelling in text
     """
-    result = await ai_service.check_grammar(request.text)
+    result = ai_service.check_grammar(request.text)
     return result
