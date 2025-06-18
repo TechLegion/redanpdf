@@ -10,6 +10,7 @@ services:
         tesseract-ocr \
         python3-pip \
         python3-venv
+      rm -rf alembic/versions/*.py
       pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:

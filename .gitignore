@@ -80,6 +80,7 @@ storage/
 
 # Alembic migration cache
 alembic/versions/*.pyc
+alembic/versions/*.py
 
 # Logs
 *.log
