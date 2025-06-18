@@ -1,7 +1,7 @@
 import os
 import shutil
 import tempfile
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Response
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -10,6 +10,11 @@ import uuid
 from datetime import datetime
 from PIL import Image
 from sqlalchemy import func
+import subprocess
+import time
+import logging
+import io
+import fitz  # PyMuPDF
 
 from pdf_saas_app.app.db.session import get_db
 from pdf_saas_app.app.db.models import User, Document
@@ -20,12 +25,15 @@ from pdf_saas_app.app.core.pdf_operations import PDFProcessor
 router = APIRouter()
 storage_service = StorageService()
 pdf_processor = PDFProcessor()
+logger = logging.getLogger(__name__)
 
 class DocumentResponse(BaseModel):
     id: str
     filename: str
-    file_size: int
+    content_type: str
+    text_content: Optional[str]
     created_at: datetime
+    download_url: str
     
     class Config:
         from_attributes = True
@@ -56,27 +64,35 @@ async def upload_document(
         # Get file size
         file_size = os.path.getsize(temp_file.name)
         
-        # Extract text content for later use with AI
-        text_content = pdf_processor.extract_text(temp_file.name)
-        
         # Upload to storage
         file_path = storage_service.upload_file(temp_file.name, file.filename)
         
         # Save document in database
         db_document = Document(
             filename=file.filename,
+            original_filename=file.filename,
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",
-            owner_id=current_user.id,
-            text_content=text_content
+            file_type="pdf",
+            owner_id=current_user.id
         )
         
         db.add(db_document)
         db.commit()
         db.refresh(db_document)
         
-        return db_document
+        # Extract text content for the response
+        text_content = pdf_processor.extract_text(temp_file.name)
+        
+        return DocumentResponse(
+            id=db_document.id,
+            filename=db_document.filename,
+            content_type="application/pdf",
+            text_content=text_content,
+            created_at=db_document.created_at,
+            download_url=f"/api/v1/documents/{db_document.id}/download"
+        )
     
     finally:
         # Clean up temp file
@@ -92,16 +108,62 @@ async def list_documents(
     List all documents owned by the current user
     """
     documents = db.query(Document).filter(Document.owner_id == current_user.id).all()
-    return documents
+    
+    # Convert Document models to DocumentResponse models
+    response_documents = []
+    for doc in documents:
+        response_documents.append(DocumentResponse(
+            id=doc.id,
+            filename=doc.filename,
+            content_type="application/pdf",  # All documents are PDFs
+            text_content=doc.get_text_content(),  # Use the method instead of direct attribute
+            created_at=doc.created_at,
+            download_url=f"/documents/{doc.id}/download"
+        ))
+    
+    return response_documents
 
-@router.get("/{document_id}")
+@router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get a document by ID
+    Get document details by ID
+    """
+    document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    # Update last accessed timestamp
+    document.last_accessed = func.now()
+    db.commit()
+    
+    # Get text content using the method
+    text_content = document.get_text_content()
+    
+    return DocumentResponse(
+        id=document.id,
+        filename=document.filename,
+        content_type="application/pdf",
+        text_content=text_content,
+        created_at=document.created_at,
+        download_url=f"/documents/{document.id}/download"
+    )
+
+@router.get("/{document_id}/download")
+async def download_document(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Download a document by ID (authenticated endpoint)
     """
     document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
     
@@ -157,9 +219,6 @@ async def merge_documents(
         # Get merged file size
         file_size = os.path.getsize(output_path)
         
-        # Extract text content
-        text_content = pdf_processor.extract_text(output_path)
-        
         # Upload merged file to storage
         file_path = storage_service.upload_file(output_path, output_filename)
         
@@ -169,8 +228,7 @@ async def merge_documents(
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",
-            owner_id=current_user.id,
-            text_content=text_content
+            owner_id=current_user.id
         )
         
         db.add(db_document)
@@ -344,3 +402,482 @@ async def image_to_pdf(
     if os.path.exists(output_path):
         os.remove(output_path)
     return db_document
+
+@router.post("/{document_id}/to-epub")
+async def pdf_to_epub(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Convert a PDF document to EPUB format
+    """
+    document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    local_file_path = storage_service.get_file(document.file_path)
+    output_filename = document.filename.rsplit(".", 1)[0] + ".epub"
+    output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.epub').name
+    
+    try:
+        pdf_processor.pdf_to_epub(local_file_path, output_path)
+        
+        # Create a new document record for the EPUB
+        epub_doc = Document(
+            filename=output_filename,
+            original_filename=output_filename,
+            file_path=storage_service.upload_file(output_path, output_filename),
+            file_size=os.path.getsize(output_path),
+            mime_type="application/epub+zip",
+            file_type="epub",
+            owner_id=current_user.id
+        )
+        
+        db.add(epub_doc)
+        db.commit()
+        db.refresh(epub_doc)
+        
+        return {
+            "document_id": epub_doc.id,
+            "download_url": f"/api/v1/documents/{epub_doc.id}/download",
+            "filename": output_filename
+        }
+    finally:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+
+@router.post("/{document_id}/to-jpg")
+async def pdf_to_jpg(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Convert a PDF document to JPG images (one per page)
+    """
+    document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    try:
+        local_file_path = storage_service.get_file(document.file_path)
+        output_dir = tempfile.mkdtemp()
+        try:
+            image_paths = pdf_processor.pdf_to_jpg(local_file_path, output_dir)
+            if not image_paths:
+                raise HTTPException(
+                    status_code=500,
+                    detail="No images were generated from the PDF"
+                )
+            
+            download_urls = []
+            filenames = []
+            for img_path in image_paths:
+                # Upload to storage
+                storage_path = storage_service.upload_file(img_path, os.path.basename(img_path))
+                # Create a new document record for each image
+                doc = Document(
+                    filename=os.path.basename(img_path),
+                    original_filename=os.path.basename(img_path),
+                    file_path=storage_path,
+                    file_size=os.path.getsize(img_path),
+                    mime_type="image/jpeg",
+                    file_type="jpg",
+                    owner_id=current_user.id
+                )
+                db.add(doc)
+                db.commit()
+                db.refresh(doc)
+                
+                # Add download URL and filename
+                download_urls.append(f"/documents/{doc.id}/download")
+                filenames.append(doc.filename)
+            
+            return {
+                "download_urls": download_urls,
+                "filenames": filenames,
+                "page_count": len(image_paths)
+            }
+        finally:
+            shutil.rmtree(output_dir, ignore_errors=True)
+    except Exception as e:
+        logger.error(f"Error in pdf_to_jpg: {str(e)}")
+        if "poppler" in str(e).lower():
+            raise HTTPException(
+                status_code=503,
+                detail="PDF to JPG conversion is currently unavailable. The required Poppler dependency is not installed. Please contact the administrator."
+            )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to convert PDF to JPG: {str(e)}"
+        )
+
+@router.post("/convert/word-to-pdf", response_model=DocumentResponse)
+async def word_to_pdf(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Convert Word document to PDF"""
+    try:
+        # Create a temporary file for the input
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_input:
+            content = await file.read()
+            temp_input.write(content)
+            temp_input.flush()
+            
+            # Create a temporary file for the output
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+                # Convert using Calibre
+                result = subprocess.run([
+                    'ebook-convert',
+                    temp_input.name,
+                    temp_output.name,
+                    '--pdf-page-numbers',
+                    '--paper-size', 'a4',
+                    '--margin-left', '72',
+                    '--margin-right', '72',
+                    '--margin-top', '72',
+                    '--margin-bottom', '72'
+                ], capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Conversion failed: {result.stderr}"
+                    )
+                
+                # Create document record
+                doc = Document(
+                    filename=f"{os.path.splitext(file.filename)[0]}_{uuid.uuid4()}.pdf",
+                    original_filename=file.filename,
+                    file_type="pdf",
+                    conversion_type="word_to_pdf"
+                )
+                db.add(doc)
+                db.commit()
+                db.refresh(doc)
+                
+                try:
+                    # Upload to storage - ensure consistent forward slashes from the start
+                    storage_path = os.path.join("documents", str(doc.id), doc.filename).replace("\\", "/")
+                    
+                    # Verify the temp file exists and has content
+                    if not os.path.exists(temp_output.name):
+                        raise HTTPException(status_code=500, detail="Temporary output file was not created")
+                    
+                    if os.path.getsize(temp_output.name) == 0:
+                        raise HTTPException(status_code=500, detail="Temporary output file is empty")
+                    
+                    # Upload the file
+                    storage_service.upload_file(temp_output.name, storage_path)
+                    
+                    # Update document with storage path
+                    doc.file_path = storage_path
+                    db.commit()
+                    db.refresh(doc)
+                    
+                    # Extract text content for the response
+                    text_content = pdf_processor.extract_text(temp_output.name)
+                    
+                    # Construct the download URL with the correct API path
+                    download_url = f"/documents/{doc.id}/download"
+                    
+                    return DocumentResponse(
+                        id=doc.id,
+                        filename=doc.filename,
+                        content_type="application/pdf",
+                        text_content=text_content,
+                        created_at=doc.created_at,
+                        download_url=download_url
+                    )
+                except Exception as e:
+                    # If storage upload fails, delete the document record
+                    db.delete(doc)
+                    db.commit()
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to upload converted file to storage: {str(e)}"
+                    )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up temporary files
+        if 'temp_input' in locals():
+            os.unlink(temp_input.name)
+        if 'temp_output' in locals():
+            os.unlink(temp_output.name)
+
+@router.post("/convert/excel-to-pdf", response_model=DocumentResponse)
+async def excel_to_pdf(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Convert Excel document to PDF"""
+    try:
+        # Create a temporary file for the input
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_input:
+            content = await file.read()
+            temp_input.write(content)
+            temp_input.flush()
+            
+            # Create a temporary file for the output
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+                # Convert using LibreOffice
+                result = subprocess.run([
+                    'soffice',
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', os.path.dirname(temp_output.name),
+                    temp_input.name
+                ], capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Conversion failed: {result.stderr}"
+                    )
+                
+                # Get the converted file path
+                converted_file = os.path.join(
+                    os.path.dirname(temp_output.name),
+                    os.path.splitext(os.path.basename(temp_input.name))[0] + '.pdf'
+                )
+                
+                if not os.path.exists(converted_file):
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Converted file not found"
+                    )
+                
+                # Move the converted file to our output location
+                shutil.move(converted_file, temp_output.name)
+                
+                # Create document record
+                doc = Document(
+                    filename=f"{os.path.splitext(file.filename)[0]}_{uuid.uuid4()}.pdf",
+                    original_filename=file.filename,
+                    file_type="pdf",
+                    conversion_type="excel_to_pdf"
+                )
+                db.add(doc)
+                db.commit()
+                db.refresh(doc)
+                
+                try:
+                    # Upload to storage - ensure consistent forward slashes from the start
+                    storage_path = os.path.join("documents", str(doc.id), doc.filename).replace("\\", "/")
+                    
+                    # Verify the temp file exists and has content
+                    if not os.path.exists(temp_output.name):
+                        raise HTTPException(status_code=500, detail="Temporary output file was not created")
+                    
+                    if os.path.getsize(temp_output.name) == 0:
+                        raise HTTPException(status_code=500, detail="Temporary output file is empty")
+                    
+                    # Upload the file
+                    storage_service.upload_file(temp_output.name, storage_path)
+                    
+                    # Update document with storage path
+                    doc.file_path = storage_path
+                    db.commit()
+                    db.refresh(doc)
+                    
+                    # Extract text content for the response
+                    text_content = pdf_processor.extract_text(temp_output.name)
+                    
+                    # Construct the download URL with the correct API path
+                    download_url = f"/documents/{doc.id}/download"
+                    
+                    return DocumentResponse(
+                        id=doc.id,
+                        filename=doc.filename,
+                        content_type="application/pdf",
+                        text_content=text_content,
+                        created_at=doc.created_at,
+                        download_url=download_url
+                    )
+                except Exception as e:
+                    # If storage upload fails, delete the document record
+                    db.delete(doc)
+                    db.commit()
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to upload converted file to storage: {str(e)}"
+                    )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up temporary files
+        if 'temp_input' in locals():
+            os.unlink(temp_input.name)
+        if 'temp_output' in locals():
+            os.unlink(temp_output.name)
+
+@router.post("/convert/ppt-to-pdf", response_model=DocumentResponse)
+async def ppt_to_pdf(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Convert PowerPoint document to PDF"""
+    try:
+        # Create a temporary file for the input
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pptx') as temp_input:
+            content = await file.read()
+            temp_input.write(content)
+            temp_input.flush()
+            
+            # Create a temporary file for the output
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+                # Convert using LibreOffice
+                result = subprocess.run([
+                    'soffice',
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', os.path.dirname(temp_output.name),
+                    temp_input.name
+                ], capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Conversion failed: {result.stderr}"
+                    )
+                
+                # Get the converted file path
+                converted_file = os.path.join(
+                    os.path.dirname(temp_output.name),
+                    os.path.splitext(os.path.basename(temp_input.name))[0] + '.pdf'
+                )
+                
+                if not os.path.exists(converted_file):
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Converted file not found"
+                    )
+                
+                # Move the converted file to our output location
+                shutil.move(converted_file, temp_output.name)
+                
+                # Create document record
+                doc = Document(
+                    filename=f"{os.path.splitext(file.filename)[0]}_{uuid.uuid4()}.pdf",
+                    original_filename=file.filename,
+                    file_type="pdf",
+                    conversion_type="ppt_to_pdf"
+                )
+                db.add(doc)
+                db.commit()
+                db.refresh(doc)
+                
+                try:
+                    # Upload to storage - ensure consistent forward slashes from the start
+                    storage_path = os.path.join("documents", str(doc.id), doc.filename).replace("\\", "/")
+                    
+                    # Verify the temp file exists and has content
+                    if not os.path.exists(temp_output.name):
+                        raise HTTPException(status_code=500, detail="Temporary output file was not created")
+                    
+                    if os.path.getsize(temp_output.name) == 0:
+                        raise HTTPException(status_code=500, detail="Temporary output file is empty")
+                    
+                    # Upload the file
+                    storage_service.upload_file(temp_output.name, storage_path)
+                    
+                    # Update document with storage path
+                    doc.file_path = storage_path
+                    db.commit()
+                    db.refresh(doc)
+                    
+                    # Extract text content for the response
+                    text_content = pdf_processor.extract_text(temp_output.name)
+                    
+                    # Construct the download URL with the correct API path
+                    download_url = f"/documents/{doc.id}/download"
+                    
+                    return DocumentResponse(
+                        id=doc.id,
+                        filename=doc.filename,
+                        content_type="application/pdf",
+                        text_content=text_content,
+                        created_at=doc.created_at,
+                        download_url=download_url
+                    )
+                except Exception as e:
+                    # If storage upload fails, delete the document record
+                    db.delete(doc)
+                    db.commit()
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to upload converted file to storage: {str(e)}"
+                    )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up temporary files
+        if 'temp_input' in locals():
+            os.unlink(temp_input.name)
+        if 'temp_output' in locals():
+            os.unlink(temp_output.name)
+
+@router.get("/{document_id}/preview")
+async def get_document_preview(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    response: Response = None
+):
+    """
+    Get a preview image of the first page of a PDF document.
+    Returns a JPEG image with caching headers.
+    """
+    document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    try:
+        # Get the file from storage
+        local_file_path = storage_service.get_file(document.file_path)
+        
+        # Open the PDF
+        pdf_document = fitz.open(local_file_path)
+        
+        # Get the first page
+        first_page = pdf_document[0]
+        
+        # Convert to image with higher resolution (2x for better quality)
+        pix = first_page.get_pixmap(matrix=fitz.Matrix(2, 2))
+        
+        # Convert to PIL Image
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        
+        # Resize to thumbnail size while maintaining aspect ratio
+        max_size = (400, 400)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Convert to bytes with good quality
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='JPEG', quality=85, optimize=True)
+        img_byte_arr.seek(0)
+        
+        # Close the PDF
+        pdf_document.close()
+        
+        # Set cache headers (1 hour cache)
+        response.headers["Cache-Control"] = "public, max-age=3600"
+        response.headers["ETag"] = f'"{document.id}-{document.last_accessed.timestamp()}"'
+        
+        return Response(
+            content=img_byte_arr.getvalue(),
+            media_type="image/jpeg"
+        )
+    except Exception as e:
+        logger.error(f"Error generating preview: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate preview"
+        )

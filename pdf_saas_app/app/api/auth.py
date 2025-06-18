@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -32,13 +32,19 @@ class UserResponse(BaseModel):
     email: str
     is_active: bool
 
+# Custom form for login that uses username field for email
+class LoginForm:
+    def __init__(self, username: str = Form(...), password: str = Form(...)):
+        self.email = username  # Use username field as email
+        self.password = password
+
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
     """
-    OAuth2 compatible token login, get an access token for future requests
+    Login endpoint that uses username field for email authentication
     """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:

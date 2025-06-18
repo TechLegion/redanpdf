@@ -284,6 +284,11 @@
             color: #dc3545;
             font-size: 0.9rem;
             margin-top: 0.25rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            display: none;
         }
     </style>
 </head>
@@ -311,6 +316,10 @@
                         <div class="mb-3">
                             <label for="loginEmail" class="form-label">Email</label>
                             <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="loginUsername">
                         </div>
                         <div class="mb-3">
                             <label for="loginPassword" class="form-label">Password</label>
@@ -386,10 +395,12 @@
                                 <h5>Drop your PDF file here or click to browse</h5>
                                 <p class="text-muted">Supports PDF files up to 10MB</p>
                                 <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+                                <div class="error-message" id="fileError"></div>
                             </div>
                             <div class="progress file-upload-progress" id="uploadProgress">
                                 <div class="progress-bar progress-bar-custom" role="progressbar" style="width: 0%"></div>
                             </div>
+                            <div class="error-message" id="uploadError"></div>
                             <div class="mt-3" id="fileInfo" style="display: none;">
                                 <div class="alert alert-success d-flex align-items-center">
                                     <i class="fas fa-check-circle me-2"></i>
@@ -399,7 +410,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="error-message" id="fileError"></div>
                         </div>
                     </div>
                 </div>
@@ -439,7 +449,59 @@
                             <button type="button" class="btn btn-custom w-100" id="btnImageToPdf"><i class="fas fa-images me-2"></i>Images to PDF</button>
                         </div>
                     </div>
-                    <div class="mt-3" id="advancedFeatureResponse"></div>
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <button type="button" class="btn btn-custom w-100" id="btnToEpub"><i class="fas fa-book me-2"></i>PDF to EPUB</button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button type="button" class="btn btn-custom w-100" id="btnToJpg"><i class="fas fa-image me-2"></i>PDF to JPG</button>
+                        </div>
+                    </div>
+                    <!-- Office to PDF Conversions -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5 class="mb-3"><i class="fas fa-file-word me-2"></i>Office to PDF Conversions</h5>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-file-word me-2"></i>Word to PDF</h6>
+                                    <input type="file" class="form-control mb-2" id="wordToPdfInput" accept=".doc,.docx">
+                                    <button type="button" class="btn btn-custom w-100" id="btnWordToPdf">
+                                        <i class="fas fa-file-pdf me-2"></i>Convert to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-file-excel me-2"></i>Excel to PDF</h6>
+                                    <input type="file" class="form-control mb-2" id="excelToPdfInput" accept=".xls,.xlsx">
+                                    <button type="button" class="btn btn-custom w-100" id="btnExcelToPdf">
+                                        <i class="fas fa-file-pdf me-2"></i>Convert to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-file-powerpoint me-2"></i>PowerPoint to PDF</h6>
+                                    <input type="file" class="form-control mb-2" id="pptToPdfInput" accept=".ppt,.pptx">
+                                    <button type="button" class="btn btn-custom w-100" id="btnPptToPdf">
+                                        <i class="fas fa-file-pdf me-2"></i>Convert to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3" id="advancedFeatureResponse">
+                        <div class="response-container">
+                            <div class="error-message" id="apiError"></div>
+                            <pre id="responseOutput" class="pre-wrap"></pre>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Feature Tabs -->
@@ -604,28 +666,35 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Global variables
-        let uploadedFile = null;
-        let uploadedDocumentId = null;
-        let chatHistory = [];
+        // Constants
+        const API_BASE_URL = 'http://localhost:8000/api/v1';
         let jwtToken = null;
         let currentUser = null;
-        const API_BASE_URL = 'http://localhost:8000/api/v1';
+        let uploadedFile = null;
+        let uploadedDocumentId = null;
+        let isAuthChecked = false;
 
-        // DOM Elements
+        // Initialize DOM elements
         const elements = {
-            authBtn: document.getElementById('authBtn'),
-            loginModal: document.getElementById('loginModal'),
-            registerModal: document.getElementById('registerModal'),
+            dropZone: document.getElementById('dropZone'),
+            fileInput: document.getElementById('fileInput'),
+            uploadProgress: document.getElementById('uploadProgress'),
+            fileError: document.getElementById('fileError'),
+            uploadError: document.getElementById('uploadError'),
+            apiError: document.getElementById('apiError'),
             loginForm: document.getElementById('loginForm'),
             registerForm: document.getElementById('registerForm'),
             showRegisterLink: document.getElementById('showRegisterLink'),
             showLoginLink: document.getElementById('showLoginLink'),
-            dropZone: document.getElementById('dropZone'),
-            fileInput: document.getElementById('fileInput'),
-            uploadProgress: document.getElementById('uploadProgress'),
-            fileError: document.getElementById('fileError')
+            authBtn: document.getElementById('authBtn'),
+            documentList: document.getElementById('documentList'),
+            mergeDocumentList: document.getElementById('mergeDocumentList'),
+            loginModal: new bootstrap.Modal(document.getElementById('loginModal')),
+            registerModal: new bootstrap.Modal(document.getElementById('registerModal'))
         };
+
+        // Global variables
+        let chatHistory = [];
 
         // Authentication Management
         function saveToken(token) {
@@ -646,41 +715,41 @@
         }
 
         function updateAuthUI() {
-            if (isAuthenticated() && currentUser) {
-                elements.authBtn.innerHTML = `<i class="fas fa-user me-2"></i>${currentUser.email} <button class="btn btn-sm btn-outline-light ms-2" onclick="logout()">Logout</button>`;
+            const authBtn = elements.authBtn;
+            if (isAuthenticated()) {
+                authBtn.textContent = 'Logout';
+                authBtn.onclick = logout;
             } else {
-                elements.authBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
-                elements.authBtn.onclick = showLoginModal;
+                authBtn.textContent = 'Login';
+                authBtn.onclick = showLoginModal;
             }
         }
 
         function showLoginModal() {
-            const modal = new bootstrap.Modal(elements.loginModal);
-            modal.show();
+            elements.loginModal.show();
         }
 
         function showRegisterModal() {
-            const modal = new bootstrap.Modal(elements.registerModal);
-            modal.show();
+            elements.registerModal.show();
         }
 
         function hideModals() {
-            const modals = [elements.loginModal, elements.registerModal];
-            modals.forEach(modal => {
-                const instance = bootstrap.Modal.getInstance(modal);
-                if (instance) instance.hide();
-            });
+            elements.loginModal.hide();
+            elements.registerModal.hide();
         }
 
-        async function logout() {
+        function logout() {
             clearToken();
-            location.reload();
+            updateAuthUI();
+            uploadedFile = null;
+            uploadedDocumentId = null;
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('documentList').innerHTML = '<option value="">Select a document</option>';
         }
 
         // API Helper Functions
         async function callAPI(endpoint, data = null, method = 'POST', isForm = false) {
             const headers = {};
-            // Always get token from memory or localStorage
             const token = jwtToken || localStorage.getItem('jwtToken');
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
@@ -688,41 +757,23 @@
             if (!isForm && data) {
                 headers['Content-Type'] = 'application/json';
             }
-
             const config = {
                 method,
                 headers
             };
-
             if (data && method !== 'GET') {
                 config.body = isForm ? data : JSON.stringify(data);
             }
-
-            // Log request details for backend debugging
-            console.log('[callAPI]', {
-                endpoint,
-                method,
-                headers,
-                isForm,
-                data,
-                jwtToken,
-                localStorageToken: localStorage.getItem('jwtToken')
-            });
             try {
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-
                 if (response.status === 401) {
-                    console.error('[callAPI] 401 Unauthorized. Token:', token);
                     clearToken();
                     showLoginModal();
-                    alert('You have been logged out due to authentication error.');
+                    alert('You have been logged out due to authentication error. Please log in again.');
                     throw new Error('Authentication required');
                 }
-
-                // Handle different content types
                 const contentType = response.headers.get('content-type');
                 let result;
-
                 if (contentType && contentType.includes('application/json')) {
                     result = await response.json();
                 } else {
@@ -730,52 +781,54 @@
                         message: await response.text()
                     };
                 }
-
                 if (!response.ok) {
-                    // Log backend error details
-                    console.error('[callAPI] API Error:', result, 'Status:', response.status);
                     alert('API Error: ' + (result.detail || result.message || 'API request failed'));
                     throw new Error(result.detail || result.message || 'API request failed');
                 }
-
                 return result;
             } catch (error) {
-                console.error('[callAPI] Exception:', error);
                 alert('API Exception: ' + error.message);
                 throw error;
             }
         }
 
         // Authentication Handlers
-        elements.loginForm.addEventListener('submit', async function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value.trim();
+            const email = document.getElementById('loginEmail').value;
+            const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
             const errorEl = document.getElementById('loginError');
-
             errorEl.classList.add('d-none');
             errorEl.textContent = '';
 
             try {
-                const formData = new URLSearchParams();
-                formData.append('username', email);
-                formData.append('password', password);
+                const params = new URLSearchParams();
+                if (email) {
+                    params.append('email', email);
+                } else if (username) {
+                    params.append('username', username);
+                } else {
+                    throw new Error('Please provide either email or username');
+                }
+                params.append('password', password);
 
                 const response = await fetch(`${API_BASE_URL}/auth/token`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: formData
+                    body: params
                 });
-                const result = await response.json();
+
                 if (!response.ok) {
-                    throw new Error(result.detail || 'Login failed');
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Login failed');
                 }
+
+                const result = await response.json();
                 saveToken(result.access_token);
-                currentUser = {
-                    email
-                };
+                currentUser = { email: email || username };
                 updateAuthUI();
                 hideModals();
             } catch (err) {
@@ -784,30 +837,49 @@
             }
         });
 
-        elements.registerForm.addEventListener('submit', async function(e) {
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const email = document.getElementById('registerEmail').value.trim();
             const password = document.getElementById('registerPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const errorEl = document.getElementById('registerError');
             const successEl = document.getElementById('registerSuccess');
+            
             errorEl.classList.add('d-none');
             errorEl.textContent = '';
             successEl.classList.add('d-none');
             successEl.textContent = '';
+
             if (password !== confirmPassword) {
                 errorEl.textContent = 'Passwords do not match.';
                 errorEl.classList.remove('d-none');
                 return;
             }
+
             try {
-                const data = {
-                    email,
-                    password
-                };
-                const result = await callAPI('/auth/register', data, 'POST');
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Registration failed');
+                }
+
                 successEl.textContent = 'Registration successful! Please login.';
                 successEl.classList.remove('d-none');
+                
+                // Clear the form
+                document.getElementById('registerEmail').value = '';
+                document.getElementById('registerPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
             } catch (err) {
                 errorEl.textContent = err.message;
                 errorEl.classList.remove('d-none');
@@ -845,71 +917,100 @@
             }
         });
 
-        function handleFileSelect() {
-            const file = elements.fileInput.files[0];
-            const errorEl = document.getElementById('fileError');
-            errorEl.textContent = '';
-            if (!file) return;
-            if (file.type !== 'application/pdf') {
-                errorEl.textContent = 'Only PDF files are allowed.';
-                return;
-            }
-            if (file.size > 10 * 1024 * 1024) {
-                errorEl.textContent = 'File size exceeds 10MB.';
-                return;
-            }
-            uploadPDF(file);
-        }
-
         async function uploadPDF(file) {
             const progressBar = elements.uploadProgress.querySelector('.progress-bar');
             elements.uploadProgress.style.display = 'block';
             progressBar.style.width = '0%';
-            const formData = new FormData();
-            formData.append('file', file);
-            // Always get token from memory or localStorage
-            const token = jwtToken || localStorage.getItem('jwtToken');
-            console.log('[uploadPDF] jwtToken:', jwtToken, 'localStorage:', localStorage.getItem('jwtToken'), 'file:', file);
+            
             try {
+                // Validate file type
+                if (!file.type === 'application/pdf') {
+                    throw new Error('Only PDF files are allowed');
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);  // Must be named 'file' to match backend
+
+                const token = localStorage.getItem('jwtToken');
+                if (!token) {
+                    throw new Error('Authentication required');
+                }
+
                 const response = await fetch(`${API_BASE_URL}/documents/upload`, {
                     method: 'POST',
-                    headers: token ? {
+                    headers: {
                         'Authorization': `Bearer ${token}`
-                    } : {},
+                    },
                     body: formData
                 });
+
                 if (!response.ok) {
-                    let errorMsg = 'Upload failed';
-                    try {
-                        const errJson = await response.json();
-                        errorMsg = errJson.detail || errJson.message || errorMsg;
-                        console.error('[uploadPDF] Backend error:', errJson);
-                        alert('Upload Error: ' + errorMsg);
-                    } catch (e) {
-                        // Not JSON
-                        const errText = await response.text();
-                        errorMsg = errText || errorMsg;
-                        console.error('[uploadPDF] Backend error (text):', errText);
-                        alert('Upload Error: ' + errorMsg);
-                    }
-                    throw new Error(errorMsg);
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Upload failed');
                 }
+
                 const result = await response.json();
                 uploadedFile = file;
                 uploadedDocumentId = result.id;
+                
+                // Update UI with success message
+                const uploadStatus = document.getElementById('uploadStatus');
+                uploadStatus.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> File uploaded successfully!
+                        <br>
+                        <small>Document ID: ${result.id}</small>
+                    </div>
+                `;
+                
+                // Update file info display
                 document.getElementById('fileName').textContent = file.name;
                 document.getElementById('fileInfo').style.display = 'block';
-                elements.uploadProgress.style.display = 'none';
-                // Log after upload
-                console.log('[uploadPDF] After upload, jwtToken:', jwtToken, 'localStorage:', localStorage.getItem('jwtToken'));
-                loadDocumentList();
+                
+                // Simulate progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    progressBar.style.width = `${progress}%`;
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        elements.uploadProgress.style.display = 'none';
+                        // Refresh document list after upload
+                        loadDocumentList();
+                        // Show document list section
+                        document.getElementById('documentListSection').style.display = 'block';
+                    }
+                }, 200);
+                
             } catch (err) {
-                elements.fileError.textContent = err.message;
+                showError('uploadError', err.message);
                 elements.uploadProgress.style.display = 'none';
-                // Log error for backend debugging
-                console.error('[uploadPDF] Exception:', err);
             }
         }
+
+        function handleFileSelect() {
+            const file = elements.fileInput.files[0];
+            if (!file) return;
+
+            // Clear previous errors
+            elements.fileError.textContent = '';
+            elements.uploadError.textContent = '';
+
+            // Validate file type
+            if (file.type !== 'application/pdf') {
+                showError('fileError', 'Only PDF files are allowed');
+                return;
+            }
+
+            // Validate file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('fileError', 'File size exceeds 10MB');
+                return;
+            }
+
+            uploadPDF(file);
+        }
+
         document.getElementById('clearFileBtn').addEventListener('click', function() {
             uploadedFile = null;
             uploadedDocumentId = null;
@@ -919,28 +1020,94 @@
 
         // Document List
         async function loadDocumentList() {
-            // Log before loading document list
-            console.log('[loadDocumentList] jwtToken:', jwtToken, 'localStorage:', localStorage.getItem('jwtToken'));
             try {
                 const docs = await callAPI('/documents/list', null, 'GET');
-                window._lastDocsList = docs; // Save for download button
+                window._lastDocsList = docs;
                 const docList = document.getElementById('documentList');
                 const mergeList = document.getElementById('mergeDocumentList');
+                const documentGrid = document.getElementById('documentGrid');
+                
+                // Clear existing content
                 docList.innerHTML = '<option value="">Select a document</option>';
                 mergeList.innerHTML = '';
-                docs.forEach(doc => {
-                    const opt = document.createElement('option');
-                    opt.value = doc.id;
-                    opt.textContent = doc.filename;
-                    docList.appendChild(opt);
-                    const mergeOpt = opt.cloneNode(true);
-                    mergeList.appendChild(mergeOpt);
-                });
+                documentGrid.innerHTML = '';
+                
+                if (docs.length > 0) {
+                    // Create grid layout for documents
+                    docs.forEach(doc => {
+                        // Add to select dropdowns
+                        const opt = document.createElement('option');
+                        opt.value = doc.id;
+                        opt.textContent = doc.filename;
+                        docList.appendChild(opt);
+                        const mergeOpt = opt.cloneNode(true);
+                        mergeList.appendChild(mergeOpt);
+                        
+                        // Create document card
+                        const card = document.createElement('div');
+                        card.className = 'col-md-4 mb-4';
+                        card.innerHTML = `
+                            <div class="card h-100">
+                                <div class="card-img-top document-preview" style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                    <div class="preview-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <small class="text-muted mt-2">Loading preview...</small>
+                                    </div>
+                                    <img src="${API_BASE_URL}/documents/${doc.id}/preview" 
+                                         alt="${doc.filename}" 
+                                         style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;"
+                                         onload="this.style.display='block'; this.previousElementSibling.style.display='none';"
+                                         onerror="this.onerror=null; this.style.display='none'; this.previousElementSibling.innerHTML='<i class=\'fas fa-file-pdf fa-3x text-muted\'></i><br><small class=\'text-muted mt-2\'>Preview not available</small>';">
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title text-truncate" title="${doc.filename}">${doc.filename}</h6>
+                                    <p class="card-text small text-muted">
+                                        ${new Date(doc.created_at).toLocaleDateString()}
+                                    </p>
+                                    <div class="btn-group w-100">
+                                        <a href="${API_BASE_URL}/documents/${doc.id}/download" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteDocument('${doc.id}')">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        documentGrid.appendChild(card);
+                    });
+                    
+                    toggleDocumentListSection(true);
+                } else {
+                    toggleDocumentListSection(false);
+                    documentGrid.innerHTML = `
+                        <div class="col-12 text-center">
+                            <p class="text-muted">No documents found. Upload a document to get started.</p>
+                        </div>
+                    `;
+                }
+                
                 updateDownloadButton();
                 docList.onchange = updateDownloadButton;
             } catch (err) {
-                // Log error for backend debugging
                 console.error('[loadDocumentList] Exception:', err);
+                toggleDocumentListSection(false);
+            }
+        }
+
+        async function deleteDocument(docId) {
+            if (!confirm('Are you sure you want to delete this document?')) {
+                return;
+            }
+            
+            try {
+                await callAPI(`/documents/${docId}`, null, 'DELETE');
+                loadDocumentList(); // Refresh the list
+            } catch (err) {
+                alert('Failed to delete document: ' + err.message);
             }
         }
 
@@ -950,27 +1117,72 @@
             const doc = docs.find(d => d.id === docId);
             const downloadDiv = document.getElementById('downloadSelectedDoc');
             if (docId && doc) {
-                downloadDiv.innerHTML = `<button class="btn btn-success" id="downloadDocBtn">Download ${doc.filename}</button>`;
-                document.getElementById('downloadDocBtn').onclick = async function() {
-                    const token = jwtToken || localStorage.getItem('jwtToken');
-                    const response = await fetch(`${API_BASE_URL}/documents/${docId}`, {
-                        headers: token ? {
-                            'Authorization': `Bearer ${token}`
-                        } : {}
-                    });
-                    if (!response.ok) {
-                        alert('Failed to download document: ' + response.statusText);
-                        return;
+                downloadDiv.innerHTML = `
+                    <button class="btn btn-success" id="downloadDocBtn" disabled>Download ${doc.filename}</button>
+                    <div id="downloadStatus" class="mt-2"></div>
+                `;
+                const downloadBtn = document.getElementById('downloadDocBtn');
+                // Enable only if authenticated and auth check is done
+                if (isAuthChecked && isAuthenticated()) {
+                    downloadBtn.disabled = false;
+                } else {
+                    downloadBtn.disabled = true;
+                }
+                downloadBtn.onclick = async function() {
+                    if (!requireAuth()) return;
+                    const button = this;
+                    const statusDiv = document.getElementById('downloadStatus');
+                    const originalText = button.textContent;
+                    try {
+                        button.textContent = 'Downloading...';
+                        button.disabled = true;
+                        statusDiv.innerHTML = '<div class="alert alert-info">Starting download...</div>';
+                        const token = jwtToken || localStorage.getItem('jwtToken');
+                        console.log('[Download] Using token:', token);
+                        if (!token) {
+                            statusDiv.innerHTML = '<div class="alert alert-danger">No authentication token found. Please log in.</div>';
+                            showLoginModal();
+                            return;
+                        }
+                        const response = await fetch(`${API_BASE_URL}/documents/${docId}/download`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        console.log('[Download] Request headers:', response.url, response.status);
+                        if (response.status === 401) {
+                            clearToken();
+                            showLoginModal();
+                            statusDiv.innerHTML = '<div class="alert alert-danger">Authentication required. Please log in again.</div>';
+                            return;
+                        }
+                        if (!response.ok) {
+                            throw new Error('Failed to download document: ' + response.statusText);
+                        }
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = doc.filename;
+                        if (contentDisposition) {
+                            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+                            if (matches != null && matches[1]) {
+                                filename = matches[1].replace(/['"]/g, '');
+                            }
+                        }
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        statusDiv.innerHTML = '<div class="alert alert-success">Download started! Check your downloads folder.</div>';
+                    } catch (err) {
+                        statusDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+                    } finally {
+                        button.textContent = originalText;
+                        button.disabled = false;
                     }
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = doc.filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(url);
                 };
             } else {
                 downloadDiv.innerHTML = '';
@@ -1031,6 +1243,72 @@
                 setFeatureResponse('advancedFeatureResponse', err.message);
             }
         });
+        document.getElementById('btnToEpub').addEventListener('click', async function() {
+            const docId = document.getElementById('documentList').value;
+            if (!docId) return;
+            setFeatureLoading('advancedFeatureResponse', true);
+            try {
+                const result = await callAPI(`/documents/${docId}/to-epub`, null, 'POST');
+                setFeatureResponse('advancedFeatureResponse', 'EPUB file ready for download.', result.download_url);
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
+
+        // Office to PDF Conversion Handlers
+        document.getElementById('btnWordToPdf').addEventListener('click', async function() {
+            const file = document.getElementById('wordToPdfInput').files[0];
+            if (!file) {
+                setFeatureResponse('advancedFeatureResponse', 'Please select a Word document.');
+                return;
+            }
+            setFeatureLoading('advancedFeatureResponse', true);
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const result = await callAPI('/documents/convert/word-to-pdf', formData, 'POST', true);
+                setFeatureResponse('advancedFeatureResponse', 'Word document converted to PDF.', result);
+                loadDocumentList(); // Refresh document list
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
+
+        document.getElementById('btnExcelToPdf').addEventListener('click', async function() {
+            const file = document.getElementById('excelToPdfInput').files[0];
+            if (!file) {
+                setFeatureResponse('advancedFeatureResponse', 'Please select an Excel document.');
+                return;
+            }
+            setFeatureLoading('advancedFeatureResponse', true);
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const result = await callAPI('/documents/convert/excel-to-pdf', formData, 'POST', true);
+                setFeatureResponse('advancedFeatureResponse', 'Excel document converted to PDF.', result);
+                loadDocumentList(); // Refresh document list
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
+
+        document.getElementById('btnPptToPdf').addEventListener('click', async function() {
+            const file = document.getElementById('pptToPdfInput').files[0];
+            if (!file) {
+                setFeatureResponse('advancedFeatureResponse', 'Please select a PowerPoint document.');
+                return;
+            }
+            setFeatureLoading('advancedFeatureResponse', true);
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const result = await callAPI('/documents/convert/ppt-to-pdf', formData, 'POST', true);
+                setFeatureResponse('advancedFeatureResponse', 'PowerPoint document converted to PDF.', result);
+                loadDocumentList(); // Refresh document list
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
 
         function setFeatureLoading(id, loading) {
             const el = document.getElementById(id);
@@ -1041,11 +1319,12 @@
             const el = document.getElementById(id);
             let url = urlOrObj;
             let filename = null;
+            let docId = null;
             if (urlOrObj && typeof urlOrObj === 'object') {
-                // Try to extract id and filename
                 if (urlOrObj.id && urlOrObj.filename) {
-                    url = `${API_BASE_URL}/documents/${urlOrObj.id}`;
+                    docId = urlOrObj.id;
                     filename = urlOrObj.filename;
+                    url = urlOrObj.download_url || `${API_BASE_URL}/documents/${docId}/download`;
                 } else if (urlOrObj.file_path) {
                     url = urlOrObj.file_path;
                 } else if (urlOrObj.download_url) {
@@ -1054,8 +1333,45 @@
                     url = null;
                 }
             }
-            if (url) {
-                el.innerHTML = `<div class='alert alert-success'>${msg} <a href='${url}' class='btn btn-sm btn-primary ms-2' target='_blank'>Download${filename ? ' ' + filename : ''}</a></div>`;
+            if (url && docId && filename) {
+                el.innerHTML = `<div class='alert alert-success'>${msg} <button class='btn btn-sm btn-primary ms-2' id='downloadConvertedBtn'>Download ${filename}</button><div id='convertedDownloadStatus'></div></div>`;
+                document.getElementById('downloadConvertedBtn').onclick = async function() {
+                    const button = this;
+                    const statusDiv = document.getElementById('convertedDownloadStatus');
+                    button.disabled = true;
+                    button.textContent = 'Downloading...';
+                    try {
+                        const token = jwtToken || localStorage.getItem('jwtToken');
+                        if (!token) {
+                            statusDiv.innerHTML = '<span class="text-danger">No authentication token found. Please log in.</span>';
+                            showLoginModal();
+                            return;
+                        }
+                        const response = await fetch(`${API_BASE_URL}/documents/${docId}/download`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        if (!response.ok) throw new Error('Download failed');
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        statusDiv.innerHTML = '<span class="text-success">Download started!</span>';
+                    } catch (err) {
+                        statusDiv.innerHTML = `<span class="text-danger">${err.message}</span>`;
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = `Download ${filename}`;
+                    }
+                };
+            } else if (url) {
+                el.innerHTML = `<div class='alert alert-success'>${msg} <a href='${url}' class='btn btn-sm btn-primary ms-2' target='_blank'>Download</a></div>`;
             } else {
                 el.innerHTML = `<div class='alert alert-danger'>${msg}</div>`;
             }
@@ -1165,20 +1481,63 @@
             }
         });
 
-        // On page load, restore token from localStorage
-        jwtToken = localStorage.getItem('jwtToken');
-        // Optionally, fetch user info if token exists
-        if (jwtToken) {
-            // Try to get user info from backend (optional, if you have /auth/me or similar)
-            callAPI('/auth/me', null, 'GET').then(user => {
-                currentUser = user;
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for existing token
+            const savedToken = localStorage.getItem('jwtToken');
+            if (savedToken) {
+                jwtToken = savedToken;
+                // Verify token by calling /auth/me
+                fetch(`${API_BASE_URL}/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${savedToken}`
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Token invalid');
+                })
+                .then(user => {
+                    currentUser = user;
+                    isAuthChecked = true;
+                    updateAuthUI();
+                })
+                .catch(() => {
+                    clearToken();
+                    isAuthChecked = true;
+                    updateAuthUI();
+                });
+            } else {
+                isAuthChecked = true;
                 updateAuthUI();
-            }).catch(() => {
-                clearToken();
+            }
+
+            // Initialize file upload handlers
+            elements.dropZone.addEventListener('click', () => elements.fileInput.click());
+            elements.fileInput.addEventListener('change', handleFileSelect);
+            
+            // Initialize drag and drop
+            elements.dropZone.addEventListener('dragover', e => {
+                e.preventDefault();
+                elements.dropZone.classList.add('dragover');
             });
-        } else {
-            updateAuthUI();
-        }
+            
+            elements.dropZone.addEventListener('dragleave', e => {
+                e.preventDefault();
+                elements.dropZone.classList.remove('dragover');
+            });
+            
+            elements.dropZone.addEventListener('drop', e => {
+                e.preventDefault();
+                elements.dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    elements.fileInput.files = e.dataTransfer.files;
+                    handleFileSelect();
+                }
+            });
+        });
 
         // Add the download button container to the DOM after the documentList select
         window.addEventListener('DOMContentLoaded', function() {
@@ -1204,6 +1563,24 @@
                 location.reload();
             }
         })();
+
+        // Block Protected Actions if Not Authenticated
+        function requireAuth(action) {
+            if (!isAuthenticated()) {
+                showLoginModal();
+                alert('You must be logged in to perform this action.');
+                return false;
+            }
+            return true;
+        }
+
+        // Add this function to show/hide document list section
+        function toggleDocumentListSection(show) {
+            const section = document.getElementById('documentListSection');
+            if (section) {
+                section.style.display = show ? 'block' : 'none';
+            }
+        }
     </script>
 </body>
 

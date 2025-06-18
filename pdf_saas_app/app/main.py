@@ -53,7 +53,12 @@ app.include_router(
     tags=["ai"]
 )
 
-app.include_router(auth_google.router, prefix="/api/v1/auth")
+# Include Google auth router with a different prefix
+app.include_router(
+    auth_google.router,
+    prefix=f"{settings.API_V1_STR}/auth/google",
+    tags=["authentication"]
+)
 
 @app.get("/")
 async def root():
@@ -65,6 +70,13 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/debug/db")
+def debug_db():
+    return {
+        "POSTGRES_DB": settings.POSTGRES_DB,
+        "SQLALCHEMY_DATABASE_URI": str(settings.SQLALCHEMY_DATABASE_URI)
+    }
 
 if __name__ == "__main__":
     import uvicorn

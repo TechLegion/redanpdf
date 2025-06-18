@@ -49,6 +49,7 @@ class Settings(BaseSettings):
             password=values.data.get("POSTGRES_PASSWORD"),
             host=values.data.get("POSTGRES_SERVER"),
             path=f"{values.data.get('POSTGRES_DB') or ''}",
+            query={"client_encoding": "utf8"}
         )
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="allow")

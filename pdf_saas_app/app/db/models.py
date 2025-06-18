@@ -2,8 +2,14 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, T
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
+from typing import Optional
+import logging
 
 from pdf_saas_app.app.db.session import Base
+from pdf_saas_app.app.core.pdf_operations import PDFProcessor
+from pdf_saas_app.app.services.storage_service import StorageService
+
+logger = logging.getLogger(__name__)
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -24,20 +30,34 @@ class Document(Base):
     
     id = Column(String, primary_key=True, index=True, default=generate_uuid)
     filename = Column(String, nullable=False)
+    original_filename = Column(String, nullable=False)  # Original uploaded filename
     file_path = Column(String)  # URL or path to stored file
     file_size = Column(Integer)  # Size in bytes
     mime_type = Column(String)
+    file_type = Column(String)  # Type of file (e.g., 'pdf', 'docx')
+    conversion_type = Column(String)  # Type of conversion (e.g., 'word_to_pdf')
     created_at = Column(DateTime, default=datetime.utcnow)
     last_accessed = Column(DateTime, default=datetime.utcnow)
     
     owner_id = Column(String, ForeignKey("users.id"))
     owner = relationship("User", back_populates="documents")
     
-    # Extracted content for AI processing
-    text_content = Column(Text, nullable=True)
-    
     chat_history = relationship("ChatHistory", back_populates="document")
     
+    def get_text_content(self) -> Optional[str]:
+        """Extract text content on-demand"""
+        try:
+            storage_service = StorageService()
+            local_file_path = storage_service.get_file(self.file_path)
+            pdf_processor = PDFProcessor()
+            return pdf_processor.extract_text(local_file_path)
+        except FileNotFoundError as e:
+            logger.error(f"File not found for text extraction: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Error extracting text content: {str(e)}")
+            return None
+
 class ChatHistory(Base):
     __tablename__ = "chat_history"
     

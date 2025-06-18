@@ -61,9 +61,21 @@ class StorageService:
         
         else:
             # Local storage
+            # Ensure the storage path exists
+            os.makedirs(settings.LOCAL_STORAGE_PATH, exist_ok=True)
+            
+            # Create the full destination path using os.path.join
             destination_path = os.path.join(settings.LOCAL_STORAGE_PATH, unique_filename)
+            
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+            
+            # Copy the file
             shutil.copyfile(file_path, destination_path)
-            return destination_path
+            
+            # Return the relative path from LOCAL_STORAGE_PATH
+            relative_path = os.path.relpath(destination_path, settings.LOCAL_STORAGE_PATH)
+            return relative_path.replace("\\", "/")
     
     def upload_file_object(self, file_object: BinaryIO, original_filename: str) -> str:
         """
@@ -92,10 +104,21 @@ class StorageService:
         
         else:
             # Local storage
+            # Ensure the storage path exists
+            os.makedirs(settings.LOCAL_STORAGE_PATH, exist_ok=True)
+            
+            # Create the full destination path using os.path.join
             destination_path = os.path.join(settings.LOCAL_STORAGE_PATH, unique_filename)
+            
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+            
+            # Write the file
             with open(destination_path, "wb") as dest_file:
                 shutil.copyfileobj(file_object, dest_file)
-            return destination_path
+            
+            # Return the normalized path with forward slashes
+            return destination_path.replace("\\", "/")
     
     def get_file(self, file_identifier: str) -> str:
         """
@@ -105,6 +128,13 @@ class StorageService:
         """
         if self.storage_type == "local":
             # For local storage, file_identifier is the path
+            # Convert to absolute path if it's relative
+            if not os.path.isabs(file_identifier):
+                file_identifier = os.path.join(settings.LOCAL_STORAGE_PATH, file_identifier)
+            
+            # Normalize the path
+            file_identifier = os.path.normpath(file_identifier)
+            
             if os.path.exists(file_identifier):
                 return file_identifier
             else:

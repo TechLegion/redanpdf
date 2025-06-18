@@ -54,8 +54,13 @@ async def chat_with_pdf(
                 detail="Document not found"
             )
         
-        # Use the extracted text content
-        context = document.text_content
+        # Get document text content
+        context = document.get_text_content()
+        if not context:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Could not extract text content from document"
+            )
     
     # Generate AI response
     response = ai_service.generate_chat_response(chat_request.query, context)
@@ -101,15 +106,16 @@ async def summarize_document(
             detail="Document not found"
         )
     
-    # Use the text content we extracted at upload time
-    if not document.text_content:
+    # Get document text content
+    context = document.get_text_content()
+    if not context:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No text content available for this document"
+            detail="Could not extract text content from document"
         )
     
     # Generate summary
-    summary = ai_service.summarize_document(document.text_content, max_length)
+    summary = ai_service.summarize_document(context, max_length)
     
     return {"summary": summary}
 

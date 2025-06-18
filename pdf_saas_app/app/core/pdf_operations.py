@@ -9,6 +9,12 @@ import tempfile
 from typing import List, Tuple, Optional
 from PIL import Image
 import pytesseract
+import subprocess
+import time
+import logging
+import shutil
+
+logger = logging.getLogger(__name__)
 
 class PDFProcessor:
     def extract_text(self, file_path: str) -> str:
@@ -190,3 +196,204 @@ class PDFProcessor:
             return output_path
         except Exception as e:
             raise Exception(f"Error rotating PDF pages: {str(e)}")
+
+    def pdf_to_epub(self, file_path: str, output_path: str) -> str:
+        """
+        Convert a PDF file to EPUB format using Calibre's ebook-convert.
+        """
+        try:
+            # On Linux (including Render), ebook-convert is in PATH
+            ebook_convert = "ebook-convert"
+            
+            result = subprocess.run(
+                [ebook_convert, file_path, output_path],
+                check=True,
+                capture_output=True
+            )
+            return output_path
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Error converting PDF to EPUB: {e.stderr.decode()}")
+        except FileNotFoundError:
+            raise Exception("Calibre's ebook-convert not found. Please install Calibre.")
+
+    def pdf_to_jpg(self, file_path: str, output_dir: str, dpi: int = 200) -> list:
+        """
+        Convert a PDF to a series of JPG images (one per page).
+        """
+        try:
+            # Check if Poppler is installed
+            if os.name == 'nt':  # Windows
+                poppler_paths = [
+                    r"C:\Program Files\poppler\bin",
+                    r"C:\Program Files (x86)\poppler\bin",
+                    os.path.expanduser("~\\AppData\\Local\\Programs\\poppler\\bin"),
+                    r"C:\Program Files\poppler\Release-24.08.0-0\poppler-24.08.0\Library\bin",  # Added actual path
+                    r"C:\Program Files\poppler\Release-24.08.0-0\Library\bin",  # Alternative path
+                    r"C:\Program Files\poppler\Library\bin"  # Generic path
+                ]
+                poppler_path = None
+                for path in poppler_paths:
+                    if os.path.exists(path):
+                        poppler_path = path
+                        logger.info(f"Found Poppler at: {path}")
+                        break
+                if not poppler_path:
+                    # Try to find pdfinfo in PATH
+                    try:
+                        pdfinfo_path = subprocess.check_output(['where', 'pdfinfo'], text=True).strip()
+                        if pdfinfo_path:
+                            poppler_path = os.path.dirname(pdfinfo_path)
+                            logger.info(f"Found Poppler via PATH at: {poppler_path}")
+                    except Exception as e:
+                        logger.error(f"Error finding pdfinfo in PATH: {str(e)}")
+                        pass
+                        
+                if not poppler_path:
+                    raise FileNotFoundError("Poppler not found. Please install Poppler and add its bin directory to PATH.")
+            else:  # Linux/Mac
+                poppler_path = None  # Let pdf2image find it in PATH
+
+            # Ensure output directory exists
+            os.makedirs(output_dir, exist_ok=True)
+            logger.info(f"Output directory: {output_dir}")
+
+            # Verify input file exists and is readable
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Input PDF file not found: {file_path}")
+            logger.info(f"Input file: {file_path}")
+
+            from pdf2image import convert_from_path
+            logger.info(f"Using Poppler path: {poppler_path}")
+            try:
+                images = convert_from_path(file_path, dpi=dpi, poppler_path=poppler_path)
+                logger.info(f"Successfully converted PDF to {len(images)} images")
+            except Exception as e:
+                logger.error(f"Error in convert_from_path: {str(e)}")
+                raise
+            
+            if not images:
+                raise Exception("No images were generated from the PDF")
+                
+            image_paths = []
+            for i, img in enumerate(images):
+                img_path = os.path.join(output_dir, f"page_{i+1}.jpg")
+                try:
+                    img.save(img_path, "JPEG", quality=95)  # Higher quality JPEG
+                    logger.info(f"Saved image {i+1} to {img_path}")
+                    image_paths.append(img_path)
+                except Exception as e:
+                    logger.error(f"Error saving image {i+1}: {str(e)}")
+                    raise
+                
+            if not image_paths:
+                raise Exception("Failed to save any images")
+                
+            return image_paths
+        except FileNotFoundError as e:
+            if "Poppler" in str(e):
+                logger.error("Poppler not found error")
+                raise Exception("PDF to JPG conversion requires Poppler to be installed. Please install Poppler and add its bin directory to PATH.")
+            logger.error(f"File not found error: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in pdf_to_jpg: {str(e)}")
+            raise Exception(f"Error converting PDF to JPG: {str(e)}")
+
+    def convert_office_to_pdf(self, input_path: str, output_path: str) -> None:
+        """
+        Convert Office documents (Word, Excel, PowerPoint) to PDF using LibreOffice
+        """
+        try:
+            # Check if LibreOffice is installed
+            if os.name == 'nt':  # Windows
+                libreoffice_paths = [
+                    r"C:\Program Files\LibreOffice\program\soffice.exe",
+                    r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                    os.path.expanduser("~\\AppData\\Local\\Programs\\LibreOffice\\program\\soffice.exe")
+                ]
+                soffice_path = None
+                for path in libreoffice_paths:
+                    if os.path.exists(path):
+                        soffice_path = path
+                        break
+                if not soffice_path:
+                    raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
+            else:  # Linux/Mac
+                # On Linux (including Render), LibreOffice is in PATH
+                soffice_path = "soffice"
+
+            logger.info(f"Using LibreOffice at: {soffice_path}")
+
+            # Convert paths to absolute paths
+            input_path = os.path.abspath(input_path)
+            output_path = os.path.abspath(output_path)
+            output_dir = os.path.dirname(output_path)
+            input_filename = os.path.basename(input_path)
+            base_filename = os.path.splitext(input_filename)[0]
+
+            logger.info(f"Input file: {input_path}")
+            logger.info(f"Output path: {output_path}")
+
+            # Ensure output directory exists
+            os.makedirs(output_dir, exist_ok=True)
+
+            # Create a temporary directory for conversion
+            with tempfile.TemporaryDirectory() as temp_dir:
+                logger.info(f"Created temporary directory: {temp_dir}")
+
+                # Copy input file to temporary directory
+                temp_input = os.path.join(temp_dir, input_filename)
+                shutil.copy2(input_path, temp_input)
+                logger.info(f"Copied input file to: {temp_input}")
+
+                # Run LibreOffice conversion in the temporary directory
+                cmd = [
+                    soffice_path,
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    temp_input
+                ]
+                logger.info(f"Running command: {' '.join(cmd)}")
+
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    cwd=temp_dir  # Set working directory to temp_dir
+                )
+
+                if result.returncode != 0:
+                    logger.error(f"Conversion failed with return code {result.returncode}")
+                    logger.error(f"stdout: {result.stdout}")
+                    logger.error(f"stderr: {result.stderr}")
+                    raise Exception(f"Conversion failed: {result.stderr}")
+
+                # Wait for file to be fully written
+                time.sleep(2)
+
+                # Get the converted file path
+                converted_file = os.path.join(temp_dir, f"{base_filename}.pdf")
+                logger.info(f"Looking for converted file at: {converted_file}")
+
+                # List all files in temp directory for debugging
+                logger.info(f"Files in temp directory: {os.listdir(temp_dir)}")
+
+                if not os.path.exists(converted_file):
+                    raise Exception(f"Converted file not found at: {converted_file}")
+
+                # Copy the converted file to the desired output location
+                shutil.copy2(converted_file, output_path)
+                logger.info(f"Copied converted file to: {output_path}")
+
+            # Verify the output file exists and has content
+            if not os.path.exists(output_path):
+                raise Exception(f"Output file not found at: {output_path}")
+            
+            if os.path.getsize(output_path) == 0:
+                raise Exception("Output file is empty")
+
+            logger.info("Conversion completed successfully")
+
+        except Exception as e:
+            logger.error(f"Error converting Office document to PDF: {str(e)}")
+            raise Exception(f"Failed to convert document: {str(e)}")
