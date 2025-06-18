@@ -1,6 +1,11 @@
 # Use an official Python image
 FROM python:3.11-slim
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive
+
 # Install system dependencies (Tesseract, libgl for pdf2image, etc.)
 RUN apt-get update && \
     apt-get install -y \
@@ -40,7 +45,8 @@ RUN apt-get update && \
     libgtk-3-0 \
     libgbm1 && \
     # Install Calibre (headless)
-    wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin && \
+    wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin install_dir=/opt/calibre && \
+    ln -s /opt/calibre/ebook-convert /usr/local/bin/ && \
     # Clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -60,7 +66,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Set proper permissions
-RUN chown -R appuser:appuser /app
+RUN chown -R appuser:appuser /app && \
+    chmod -R 755 /app
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/storage && \
+    chown -R appuser:appuser /app/storage && \
+    chmod -R 755 /app/storage
 
 # Switch to non-root user
 USER appuser
@@ -68,5 +80,9 @@ USER appuser
 # Expose the port FastAPI will run on
 EXPOSE 8000
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
 # Start the app with Uvicorn
-CMD ["uvicorn", "pdf_saas_app.app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["uvicorn", "pdf_saas_app.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"] 
