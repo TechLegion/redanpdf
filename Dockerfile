@@ -3,24 +3,70 @@ FROM python:3.11-slim
 
 # Install system dependencies (Tesseract, libgl for pdf2image, etc.)
 RUN apt-get update && \
-    apt-get install -y tesseract-ocr libgl1-mesa-glx poppler-utils wget xz-utils libglib2.0-0 libxrender1 libsm6 libxext6 && \
+    apt-get install -y \
+    tesseract-ocr \
+    libgl1-mesa-glx \
+    poppler-utils \
+    wget \
+    xz-utils \
+    libglib2.0-0 \
+    libxrender1 \
+    libsm6 \
+    libxext6 \
+    libreoffice \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
+    fonts-liberation \
+    libfontconfig1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxss1 \
+    libxtst6 \
+    libnss3 \
+    libcups2 \
+    libxshmfence1 \
+    libasound2 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libpangocairo-1.0-0 \
+    libgtk-3-0 \
+    libgbm1 && \
     # Install Calibre (headless)
     wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin && \
-    rm -rf /var/lib/apt/lists/*
+    # Clean up
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Create a non-root user
+RUN useradd -m -u 1000 appuser
 
 # Set work directory
 WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the app
 COPY . .
+
+# Set proper permissions
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Expose the port FastAPI will run on
 EXPOSE 8000
 
 # Start the app with Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["uvicorn", "pdf_saas_app.app.main:app", "--host", "0.0.0.0", "--port", "8000"] 

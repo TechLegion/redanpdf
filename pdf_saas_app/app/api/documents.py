@@ -623,9 +623,48 @@ async def excel_to_pdf(
             
             # Create a temporary file for the output
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+                # Get LibreOffice path using the same logic as pdf_operations.py
+                if os.name == 'nt':  # Windows
+                    libreoffice_paths = [
+                        r"C:\Program Files\LibreOffice\program\soffice.exe",
+                        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                        os.path.expanduser("~\\AppData\\Local\\Programs\\LibreOffice\\program\\soffice.exe")
+                    ]
+                    soffice_path = None
+                    for path in libreoffice_paths:
+                        if os.path.exists(path):
+                            soffice_path = path
+                            break
+                else:  # Linux/Mac
+                    linux_paths = [
+                        "/usr/bin/libreoffice",
+                        "/usr/bin/soffice",
+                        "/usr/lib/libreoffice/program/soffice",
+                        "/opt/libreoffice/program/soffice",
+                        "/snap/bin/libreoffice",
+                        "/usr/local/bin/libreoffice",
+                        "/usr/local/bin/soffice"
+                    ]
+                    soffice_path = None
+                    for path in linux_paths:
+                        if os.path.exists(path):
+                            soffice_path = path
+                            break
+                    if not soffice_path:
+                        try:
+                            soffice_path = subprocess.check_output(['which', 'libreoffice']).decode().strip()
+                        except:
+                            try:
+                                soffice_path = subprocess.check_output(['which', 'soffice']).decode().strip()
+                            except:
+                                raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
+
+                if not soffice_path:
+                    raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
+
                 # Convert using LibreOffice
                 result = subprocess.run([
-                    '/usr/bin/libreoffice',
+                    soffice_path,
                     '--headless',
                     '--convert-to', 'pdf',
                     '--outdir', os.path.dirname(temp_output.name),
@@ -729,9 +768,48 @@ async def ppt_to_pdf(
             
             # Create a temporary file for the output
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+                # Get LibreOffice path using the same logic as pdf_operations.py
+                if os.name == 'nt':  # Windows
+                    libreoffice_paths = [
+                        r"C:\Program Files\LibreOffice\program\soffice.exe",
+                        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                        os.path.expanduser("~\\AppData\\Local\\Programs\\LibreOffice\\program\\soffice.exe")
+                    ]
+                    soffice_path = None
+                    for path in libreoffice_paths:
+                        if os.path.exists(path):
+                            soffice_path = path
+                            break
+                else:  # Linux/Mac
+                    linux_paths = [
+                        "/usr/bin/libreoffice",
+                        "/usr/bin/soffice",
+                        "/usr/lib/libreoffice/program/soffice",
+                        "/opt/libreoffice/program/soffice",
+                        "/snap/bin/libreoffice",
+                        "/usr/local/bin/libreoffice",
+                        "/usr/local/bin/soffice"
+                    ]
+                    soffice_path = None
+                    for path in linux_paths:
+                        if os.path.exists(path):
+                            soffice_path = path
+                            break
+                    if not soffice_path:
+                        try:
+                            soffice_path = subprocess.check_output(['which', 'libreoffice']).decode().strip()
+                        except:
+                            try:
+                                soffice_path = subprocess.check_output(['which', 'soffice']).decode().strip()
+                            except:
+                                raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
+
+                if not soffice_path:
+                    raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
+
                 # Convert using LibreOffice
                 result = subprocess.run([
-                    '/usr/bin/libreoffice',
+                    soffice_path,
                     '--headless',
                     '--convert-to', 'pdf',
                     '--outdir', os.path.dirname(temp_output.name),
