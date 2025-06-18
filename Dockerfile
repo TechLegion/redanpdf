@@ -43,10 +43,8 @@ RUN apt-get update && \
     libatk-bridge2.0-0 \
     libpangocairo-1.0-0 \
     libgtk-3-0 \
-    libgbm1 && \
-    # Install Calibre (headless)
-    wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin install_dir=/opt/calibre && \
-    ln -s /opt/calibre/ebook-convert /usr/local/bin/ && \
+    libgbm1 \
+    calibre && \
     # Clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
