@@ -1,4 +1,890 @@
-<script>
-    const API_BASE_URL = 'https://redanpdf-1q1l.onrender.com/api/v1';
-    let token = localStorage.getItem('token');
-</script> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF API Test Interface</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .endpoint-card {
+            margin-bottom: 1rem;
+        }
+        .response-area {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .auth-section {
+            background-color: #e9ecef;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+        }
+        .document-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .document-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .document-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .document-preview {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .document-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .document-info {
+            padding: 10px;
+        }
+        .document-title {
+            font-size: 0.9rem;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .document-date {
+            font-size: 0.8rem;
+            color: #666;
+            margin: 5px 0;
+        }
+        .document-actions {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+        .document-actions button {
+            flex: 1;
+            font-size: 0.8rem;
+            padding: 5px;
+        }
+        .loading-preview {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">PDF API Test Interface</h1>
+        
+        <!-- Authentication Section -->
+        <div class="auth-section">
+            <h3>Authentication</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Email/Password Sign In</h5>
+                            <form id="loginForm">
+                                <div class="mb-3">
+                                    <label for="loginEmail" class="form-label">Email address</label>
+                                    <input type="email" class="form-control" id="loginEmail" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="loginPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="loginPassword" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Sign In</button>
+                            </form>
+                            <hr>
+                            <h6>Or register a new account</h6>
+                            <form id="registerForm">
+                                <div class="mb-3">
+                                    <label for="registerEmail" class="form-label">Email address</label>
+                                    <input type="email" class="form-control" id="registerEmail" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="registerPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="registerPassword" required>
+                                </div>
+                                <button type="submit" class="btn btn-secondary">Register</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Google Sign In</h5>
+                            <button id="googleSignInBtn" class="btn btn-primary">Sign in with Google</button>
+                            <div class="response-area mt-3" id="authResponse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Operations Section -->
+        <h3 class="mt-4">Document Operations</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Upload PDF</h5>
+                        <form id="uploadForm">
+                            <div class="mb-3">
+                                <input type="file" class="form-control" id="pdfFile" accept=".pdf" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Upload</button>
+                        </form>
+                        <div class="response-area mt-3" id="uploadResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Your Documents</h5>
+                        <button class="btn btn-primary" onclick="listDocuments()">Refresh List</button>
+                        <div class="response-area mt-3" id="listResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Management Section -->
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Document Details</h5>
+                        <form id="documentDetailsForm">
+                            <div class="mb-3">
+                                <label for="documentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="documentId" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Get Details</button>
+                        </form>
+                        <div class="response-area mt-3" id="documentDetailsResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Delete Document</h5>
+                        <form id="deleteDocumentForm">
+                            <div class="mb-3">
+                                <label for="deleteDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="deleteDocumentId" required>
+                            </div>
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                        <div class="response-area mt-3" id="deleteDocumentResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Conversion Section -->
+        <h3 class="mt-4">File Conversion</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Image to PDF</h5>
+                        <form id="imageToPdfForm">
+                            <div class="mb-3">
+                                <label for="imageFiles" class="form-label">Select Images</label>
+                                <input type="file" class="form-control" id="imageFiles" accept="image/*" multiple required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Convert to PDF</button>
+                        </form>
+                        <div class="response-area mt-3" id="imageToPdfResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Office to PDF</h5>
+                        <ul class="nav nav-tabs" id="officeTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="word-tab" data-bs-toggle="tab" data-bs-target="#word" type="button" role="tab">Word</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="excel-tab" data-bs-toggle="tab" data-bs-target="#excel" type="button" role="tab">Excel</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="ppt-tab" data-bs-toggle="tab" data-bs-target="#ppt" type="button" role="tab">PowerPoint</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content mt-3" id="officeTabContent">
+                            <div class="tab-pane fade show active" id="word" role="tabpanel">
+                                <form id="wordToPdfForm">
+                                    <div class="mb-3">
+                                        <label for="wordFile" class="form-label">Select Word Document</label>
+                                        <input type="file" class="form-control" id="wordFile" accept=".docx" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Convert to PDF</button>
+                                </form>
+                                <div class="response-area mt-3" id="wordToPdfResponse"></div>
+                            </div>
+                            <div class="tab-pane fade" id="excel" role="tabpanel">
+                                <form id="excelToPdfForm">
+                                    <div class="mb-3">
+                                        <label for="excelFile" class="form-label">Select Excel Document</label>
+                                        <input type="file" class="form-control" id="excelFile" accept=".xlsx" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Convert to PDF</button>
+                                </form>
+                                <div class="response-area mt-3" id="excelToPdfResponse"></div>
+                            </div>
+                            <div class="tab-pane fade" id="ppt" role="tabpanel">
+                                <form id="pptToPdfForm">
+                                    <div class="mb-3">
+                                        <label for="pptFile" class="form-label">Select PowerPoint Document</label>
+                                        <input type="file" class="form-control" id="pptFile" accept=".pptx" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Convert to PDF</button>
+                                </form>
+                                <div class="response-area mt-3" id="pptToPdfResponse"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Operations Section -->
+        <h3 class="mt-4">PDF Operations</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Split PDF</h5>
+                        <form id="splitPdfForm">
+                            <div class="mb-3">
+                                <label for="splitDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="splitDocumentId" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Split PDF</button>
+                        </form>
+                        <div class="response-area mt-3" id="splitPdfResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Compress PDF</h5>
+                        <form id="compressPdfForm">
+                            <div class="mb-3">
+                                <label for="compressDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="compressDocumentId" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Compress PDF</button>
+                        </form>
+                        <div class="response-area mt-3" id="compressPdfResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Merge PDFs</h5>
+                        <form id="mergePdfForm">
+                            <div class="mb-3">
+                                <label for="mergeDocumentIds" class="form-label">Document IDs (comma-separated)</label>
+                                <input type="text" class="form-control" id="mergeDocumentIds" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Merge PDFs</button>
+                        </form>
+                        <div class="response-area mt-3" id="mergePdfResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Watermark PDF</h5>
+                        <form id="watermarkPdfForm">
+                            <div class="mb-3">
+                                <label for="watermarkDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="watermarkDocumentId" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="watermarkText" class="form-label">Watermark Text</label>
+                                <input type="text" class="form-control" id="watermarkText" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add Watermark</button>
+                        </form>
+                        <div class="response-area mt-3" id="watermarkPdfResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Rotate PDF</h5>
+                        <form id="rotatePdfForm">
+                            <div class="mb-3">
+                                <label for="rotateDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="rotateDocumentId" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="rotationAngle" class="form-label">Rotation Angle (degrees)</label>
+                                <select class="form-control" id="rotationAngle" required>
+                                    <option value="90">90°</option>
+                                    <option value="180">180°</option>
+                                    <option value="270">270°</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Rotate PDF</button>
+                        </form>
+                        <div class="response-area mt-3" id="rotatePdfResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Extract Text (OCR)</h5>
+                        <form id="extractTextForm">
+                            <div class="mb-3">
+                                <label for="extractTextDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="extractTextDocumentId" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Extract Text</button>
+                        </form>
+                        <div class="response-area mt-3" id="extractTextResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Features Section -->
+        <h3 class="mt-4">AI Features</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Chat with PDF</h5>
+                        <form id="chatForm">
+                            <div class="mb-3">
+                                <label for="chatDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="chatDocumentId" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="chatMessage" class="form-label">Message</label>
+                                <textarea class="form-control" id="chatMessage" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Send Message</button>
+                        </form>
+                        <div class="response-area mt-3" id="chatResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Grammar Check</h5>
+                        <form id="grammarForm">
+                            <div class="mb-3">
+                                <label for="grammarText" class="form-label">Text to Check</label>
+                                <textarea class="form-control" id="grammarText" rows="4" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Check Grammar</button>
+                        </form>
+                        <div class="response-area mt-3" id="grammarResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Summarize PDF</h5>
+                        <form id="summarizeForm">
+                            <div class="mb-3">
+                                <label for="summarizeDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="summarizeDocumentId" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Summarize</button>
+                        </form>
+                        <div class="response-area mt-3" id="summarizeResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Convert to EPUB</h5>
+                        <form id="epubForm">
+                            <div class="mb-3">
+                                <label for="epubDocumentId" class="form-label">Document ID</label>
+                                <input type="text" class="form-control" id="epubDocumentId" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Convert to EPUB</button>
+                        </form>
+                        <div class="response-area mt-3" id="epubResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE_URL = 'https://redanpdf-1q1l.onrender.com/api/v1';
+        let token = localStorage.getItem('token');
+
+        // Firebase configuration
+        const firebaseConfig = {
+            // Add your Firebase config here
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Authentication handlers
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        'username': document.getElementById('loginEmail').value,
+                        'password': document.getElementById('loginPassword').value
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    token = data.access_token;
+                    localStorage.setItem('token', token);
+                    document.getElementById('authResponse').textContent = 'Login successful!';
+                } else {
+                    document.getElementById('authResponse').textContent = 'Login failed: ' + data.detail;
+                }
+            } catch (error) {
+                document.getElementById('authResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('registerEmail').value,
+                        password: document.getElementById('registerPassword').value
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('authResponse').textContent = 'Registration successful!';
+                } else {
+                    document.getElementById('authResponse').textContent = 'Registration failed: ' + data.detail;
+                }
+            } catch (error) {
+                document.getElementById('authResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        // Google Sign In
+        document.getElementById('googleSignInBtn').addEventListener('click', async () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                const result = await firebase.auth().signInWithPopup(provider);
+                const idToken = await result.user.getIdToken();
+                const response = await fetch(`${API_BASE_URL}/auth/google/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: idToken })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    token = data.access_token;
+                    localStorage.setItem('token', token);
+                    document.getElementById('authResponse').textContent = 'Google sign-in successful!';
+                } else {
+                    document.getElementById('authResponse').textContent = 'Google sign-in failed: ' + data.detail;
+                }
+            } catch (error) {
+                document.getElementById('authResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        // Document Operations
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('file', document.getElementById('pdfFile').files[0]);
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('uploadResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('uploadResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        async function listDocuments() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/list`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('listResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('listResponse').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // Document Management
+        document.getElementById('documentDetailsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('documentId').value}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('documentDetailsResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('documentDetailsResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('deleteDocumentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('deleteDocumentId').value}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('deleteDocumentResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('deleteDocumentResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        // File Conversion
+        document.getElementById('imageToPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const files = document.getElementById('imageFiles').files;
+            for (let file of files) {
+                formData.append('files', file);
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/image-to-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('imageToPdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('imageToPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('wordToPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('file', document.getElementById('wordFile').files[0]);
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/convert/word-to-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('wordToPdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('wordToPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('excelToPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('file', document.getElementById('excelFile').files[0]);
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/convert/excel-to-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('excelToPdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('excelToPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('pptToPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('file', document.getElementById('pptFile').files[0]);
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/convert/ppt-to-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('pptToPdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('pptToPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        // PDF Operations
+        document.getElementById('splitPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('splitDocumentId').value}/split`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('splitPdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('splitPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('compressPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('compressDocumentId').value}/compress`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('compressPdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('compressPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('mergePdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const documentIds = document.getElementById('mergeDocumentIds').value.split(',').map(id => id.trim());
+                const response = await fetch(`${API_BASE_URL}/documents/merge`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        document_ids: documentIds
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('mergePdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('mergePdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('watermarkPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('watermarkDocumentId').value}/watermark`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        watermark_text: document.getElementById('watermarkText').value
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('watermarkPdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('watermarkPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('rotatePdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('rotateDocumentId').value}/rotate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        angle: parseInt(document.getElementById('rotationAngle').value)
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('rotatePdfResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('rotatePdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('extractTextForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('extractTextDocumentId').value}/extract-text`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('extractTextResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('extractTextResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        // AI Features
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        document_id: document.getElementById('chatDocumentId').value,
+                        query: document.getElementById('chatMessage').value
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('chatResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('chatResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('grammarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/ai/grammar-check`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        text: document.getElementById('grammarText').value
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('grammarResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('grammarResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('summarizeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/ai/summarize/${document.getElementById('summarizeDocumentId').value}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('summarizeResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('summarizeResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('epubForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('epubDocumentId').value}/to-epub`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('epubResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('epubResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html> 

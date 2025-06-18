@@ -625,7 +625,7 @@ async def excel_to_pdf(
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
                 # Convert using LibreOffice
                 result = subprocess.run([
-                    'soffice',
+                    '/usr/bin/libreoffice',
                     '--headless',
                     '--convert-to', 'pdf',
                     '--outdir', os.path.dirname(temp_output.name),
@@ -731,7 +731,7 @@ async def ppt_to_pdf(
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
                 # Convert using LibreOffice
                 result = subprocess.run([
-                    'soffice',
+                    '/usr/bin/libreoffice',
                     '--headless',
                     '--convert-to', 'pdf',
                     '--outdir', os.path.dirname(temp_output.name),

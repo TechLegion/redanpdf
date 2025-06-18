@@ -319,8 +319,8 @@ class PDFProcessor:
                 if not soffice_path:
                     raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
             else:  # Linux/Mac
-                # On Linux (including Render), LibreOffice is in PATH
-                soffice_path = "soffice"
+                # On Linux (including Render), use the full path to LibreOffice
+                soffice_path = "/usr/bin/libreoffice"
 
             logger.info(f"Using LibreOffice at: {soffice_path}")
 
