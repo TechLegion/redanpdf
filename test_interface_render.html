@@ -87,6 +87,22 @@
             transform: translate(-50%, -50%);
             color: #666;
         }
+        .preview-container {
+            margin-top: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 1rem;
+            background: #f8f9fa;
+        }
+        .preview-container iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+        .preview-container img {
+            max-width: 100%;
+            height: auto;
+        }
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -152,7 +168,7 @@
                         <h5 class="card-title">Upload PDF</h5>
                         <form id="uploadForm">
                             <div class="mb-3">
-                                <input type="file" class="form-control" id="pdfFile" accept=".pdf" required>
+                                <input type="file" class="form-control" id="file" accept=".pdf" required>
                             </div>
                             <button type="submit" class="btn btn-primary">Upload</button>
                         </form>
@@ -243,31 +259,37 @@
                                 <form id="wordToPdfForm">
                                     <div class="mb-3">
                                         <label for="wordFile" class="form-label">Select Word Document</label>
-                                        <input type="file" class="form-control" id="wordFile" accept=".docx" required>
+                                        <input type="file" class="form-control" id="wordFile" accept=".doc,.docx" required>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Convert to PDF</button>
                                 </form>
-                                <div class="response-area mt-3" id="wordToPdfResponse"></div>
+                                <div class="response-area mt-3" id="wordToPdfResponse">
+                                    <div class="preview-container" id="wordPreview"></div>
+                                </div>
                             </div>
                             <div class="tab-pane fade" id="excel" role="tabpanel">
                                 <form id="excelToPdfForm">
                                     <div class="mb-3">
                                         <label for="excelFile" class="form-label">Select Excel Document</label>
-                                        <input type="file" class="form-control" id="excelFile" accept=".xlsx" required>
+                                        <input type="file" class="form-control" id="excelFile" accept=".xls,.xlsx" required>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Convert to PDF</button>
                                 </form>
-                                <div class="response-area mt-3" id="excelToPdfResponse"></div>
+                                <div class="response-area mt-3" id="excelToPdfResponse">
+                                    <div class="preview-container" id="excelPreview"></div>
+                                </div>
                             </div>
                             <div class="tab-pane fade" id="ppt" role="tabpanel">
                                 <form id="pptToPdfForm">
                                     <div class="mb-3">
                                         <label for="pptFile" class="form-label">Select PowerPoint Document</label>
-                                        <input type="file" class="form-control" id="pptFile" accept=".pptx" required>
+                                        <input type="file" class="form-control" id="pptFile" accept=".ppt,.pptx" required>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Convert to PDF</button>
                                 </form>
-                                <div class="response-area mt-3" id="pptToPdfResponse"></div>
+                                <div class="response-area mt-3" id="pptToPdfResponse">
+                                    <div class="preview-container" id="pptPreview"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -463,52 +485,142 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE_URL = 'https://redanpdf-1q1l.onrender.com/api/v1';
-        let token = localStorage.getItem('token');
+        // API base URL
+        const API_BASE_URL = 'https://redanpdf-1.onrender.com/api/v1';
+        
+        // Get token from localStorage
+        function getToken() {
+            return localStorage.getItem('token');
+        }
 
-        // Firebase configuration
-        const firebaseConfig = {
-            // Add your Firebase config here
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+        // Generic API call function
+        async function callAPI(endpoint, data = null, method = 'GET', isFormData = false) {
+            try {
+                const token = getToken();
+                if (!token) {
+                    throw new Error('Not authenticated');
+                }
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
+                const headers = {
+                    'Authorization': `Bearer ${token}`
+                };
 
-        // Authentication handlers
+                if (!isFormData) {
+                    headers['Content-Type'] = 'application/json';
+                }
+
+                const options = {
+                    method: method,
+                    headers: headers,
+                    mode: 'cors'  // Enable CORS
+                };
+
+                if (data) {
+                    options.body = isFormData ? data : JSON.stringify(data);
+                }
+
+                console.log(`Making ${method} request to ${API_BASE_URL}${endpoint}`);  // Debug log
+
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
+                    console.error('API Error Response:', errorData);  // Debug log
+                    throw new Error(errorData.detail || `API request failed with status ${response.status}`);
+                }
+
+                // Handle file downloads
+                const contentType = response.headers.get('content-type');
+                if (contentType && (contentType.includes('application/pdf') || contentType.includes('image/'))) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `converted_${Date.now()}.${contentType.includes('pdf') ? 'pdf' : 'jpg'}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    return { message: 'File downloaded successfully' };
+                }
+
+                // Handle JSON responses
+                const responseData = await response.json();
+                if (responseData.download_url) {
+                    // Create a download link for the file
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = `${API_BASE_URL}${responseData.download_url}`;
+                    downloadLink.download = responseData.filename || `converted_${Date.now()}`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                }
+                return responseData;
+            } catch (error) {
+                console.error('API Error:', error);
+                if (error.message === 'Failed to fetch') {
+                    throw new Error('Unable to connect to the server. The server might be starting up or experiencing issues. Please try again in a few moments.');
+                }
+                throw error;
+            }
+        }
+
+        // Set response in UI
+        function setResponse(elementId, message, data = null) {
+            const element = document.getElementById(elementId);
+            if (data) {
+                element.innerHTML = `<div class="alert alert-success">${message}</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } else {
+                element.innerHTML = `<div class="alert alert-info">${message}</div>`;
+            }
+        }
+
+        // Set error in UI
+        function setError(elementId, error) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+        }
+
+        // Login handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
             try {
+                const formData = new URLSearchParams();
+                formData.append('username', email); // API expects 'username' field for email
+                formData.append('password', password);
+
                 const response = await fetch(`${API_BASE_URL}/auth/token`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: new URLSearchParams({
-                        'username': document.getElementById('loginEmail').value,
-                        'password': document.getElementById('loginPassword').value
-                    })
+                    body: formData
                 });
-                const data = await response.json();
-                if (response.ok) {
-                    token = data.access_token;
-                    localStorage.setItem('token', token);
-                    document.getElementById('authResponse').textContent = 'Login successful!';
-                } else {
-                    document.getElementById('authResponse').textContent = 'Login failed: ' + data.detail;
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Login failed');
                 }
+
+                const data = await response.json();
+                localStorage.setItem('token', data.access_token);
+                document.getElementById('authResponse').innerHTML = 
+                    `<div class="alert alert-success">Signed in as ${email}</div>`;
+                listDocuments(); // Load documents after successful login
             } catch (error) {
-                document.getElementById('authResponse').textContent = 'Error: ' + error.message;
+                setError('authResponse', error);
             }
         });
 
+        // Register handler
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/register`, {
                     method: 'POST',
@@ -516,373 +628,325 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        email: document.getElementById('registerEmail').value,
-                        password: document.getElementById('registerPassword').value
+                        email: email,
+                        password: password
                     })
                 });
-                const data = await response.json();
-                if (response.ok) {
-                    document.getElementById('authResponse').textContent = 'Registration successful!';
-                } else {
-                    document.getElementById('authResponse').textContent = 'Registration failed: ' + data.detail;
-                }
-            } catch (error) {
-                document.getElementById('authResponse').textContent = 'Error: ' + error.message;
-            }
-        });
 
-        // Google Sign In
-        document.getElementById('googleSignInBtn').addEventListener('click', async () => {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            try {
-                const result = await firebase.auth().signInWithPopup(provider);
-                const idToken = await result.user.getIdToken();
-                const response = await fetch(`${API_BASE_URL}/auth/google/token`, {
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Registration failed');
+                }
+
+                // After successful registration, log in the user
+                const formData = new URLSearchParams();
+                formData.append('username', email);
+                formData.append('password', password);
+
+                const loginResponse = await fetch(`${API_BASE_URL}/auth/token`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ token: idToken })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    token = data.access_token;
-                    localStorage.setItem('token', token);
-                    document.getElementById('authResponse').textContent = 'Google sign-in successful!';
-                } else {
-                    document.getElementById('authResponse').textContent = 'Google sign-in failed: ' + data.detail;
-                }
-            } catch (error) {
-                document.getElementById('authResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        // Document Operations
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', document.getElementById('pdfFile').files[0]);
-            try {
-                const response = await fetch(`${API_BASE_URL}/documents/upload`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: formData
                 });
-                const data = await response.json();
-                document.getElementById('uploadResponse').textContent = JSON.stringify(data, null, 2);
+
+                if (!loginResponse.ok) {
+                    throw new Error('Registration successful but login failed');
+                }
+
+                const loginData = await loginResponse.json();
+                localStorage.setItem('token', loginData.access_token);
+                document.getElementById('authResponse').innerHTML = 
+                    `<div class="alert alert-success">Registered and signed in as ${email}</div>`;
+                listDocuments(); // Load documents after successful registration
             } catch (error) {
-                document.getElementById('uploadResponse').textContent = 'Error: ' + error.message;
+                setError('authResponse', error);
             }
         });
 
+        // Sign Out
+        function signOut() {
+            localStorage.removeItem('token');
+            document.getElementById('authResponse').innerHTML = 
+                `<div class="alert alert-info">Signed out successfully</div>`;
+            document.getElementById('listResponse').innerHTML = '';
+        }
+
+        // Document upload handler
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('file');
+            const file = fileInput.files[0];
+            if (!file) {
+                setError('uploadResponse', new Error('Please select a file'));
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const result = await callAPI('/documents/upload', formData, 'POST', true);
+                setResponse('uploadResponse', 'File uploaded successfully', result);
+                listDocuments(); // Refresh document list
+            } catch (error) {
+                setError('uploadResponse', error);
+            }
+        });
+
+        // List documents
         async function listDocuments() {
             try {
-                const response = await fetch(`${API_BASE_URL}/documents/list`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('listResponse').textContent = JSON.stringify(data, null, 2);
+                const documents = await callAPI('/documents/list');
+                setResponse('listResponse', 'Documents retrieved successfully', documents);
             } catch (error) {
-                document.getElementById('listResponse').textContent = 'Error: ' + error.message;
+                setError('listResponse', error);
             }
         }
 
-        // Document Management
-        document.getElementById('documentDetailsForm').addEventListener('submit', async (e) => {
+        // Chat with PDF handler
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const documentId = document.getElementById('chatDocumentId').value;
+            const message = document.getElementById('chatMessage').value;
+            
             try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('documentId').value}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('documentDetailsResponse').textContent = JSON.stringify(data, null, 2);
+                const result = await callAPI('/ai/chat', {
+                    query: message,
+                    document_id: documentId
+                }, 'POST');
+                setResponse('chatResponse', 'Chat response received', result);
             } catch (error) {
-                document.getElementById('documentDetailsResponse').textContent = 'Error: ' + error.message;
+                setError('chatResponse', error);
             }
         });
 
-        document.getElementById('deleteDocumentForm').addEventListener('submit', async (e) => {
+        // Summarize PDF handler
+        document.getElementById('summarizeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const documentId = document.getElementById('summarizeDocumentId').value;
+            
             try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('deleteDocumentId').value}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('deleteDocumentResponse').textContent = JSON.stringify(data, null, 2);
+                const result = await callAPI(`/ai/summarize/${documentId}`, null, 'POST');
+                setResponse('summarizeResponse', 'Summary generated', result);
             } catch (error) {
-                document.getElementById('deleteDocumentResponse').textContent = 'Error: ' + error.message;
+                setError('summarizeResponse', error);
             }
         });
 
-        // File Conversion
-        document.getElementById('imageToPdfForm').addEventListener('submit', async (e) => {
+        // Grammar check handler
+        document.getElementById('grammarForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const text = document.getElementById('grammarText').value;
+            
+            try {
+                const result = await callAPI('/ai/grammar-check', {
+                    text: text
+                }, 'POST');
+                setResponse('grammarResponse', 'Grammar check completed', result);
+            } catch (error) {
+                setError('grammarResponse', error);
+            }
+        });
+
+        // Merge PDFs handler
+        document.getElementById('mergePdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const documentIds = document.getElementById('mergeDocumentIds').value.split(',').map(id => id.trim());
+            const outputFilename = document.getElementById('mergeOutputFilename').value || 'merged.pdf';
+            
             const formData = new FormData();
-            const files = document.getElementById('imageFiles').files;
-            for (let file of files) {
-                formData.append('files', file);
-            }
+            documentIds.forEach(id => formData.append('document_ids', id));
+            formData.append('output_filename', outputFilename);
+            
             try {
-                const response = await fetch(`${API_BASE_URL}/documents/image-to-pdf`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                const data = await response.json();
-                document.getElementById('imageToPdfResponse').textContent = JSON.stringify(data, null, 2);
+                const result = await callAPI('/documents/merge', formData, 'POST', true);
+                setResponse('mergePdfResponse', 'PDFs merged successfully', result);
+                listDocuments(); // Refresh document list
             } catch (error) {
-                document.getElementById('imageToPdfResponse').textContent = 'Error: ' + error.message;
+                setError('mergePdfResponse', error);
             }
         });
 
+        // Watermark PDF handler
+        document.getElementById('watermarkPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const documentId = document.getElementById('watermarkDocumentId').value;
+            const watermarkText = document.getElementById('watermarkText').value;
+            
+            const formData = new FormData();
+            formData.append('text', watermarkText);
+            
+            try {
+                const result = await callAPI(`/documents/${documentId}/watermark`, formData, 'POST', true);
+                setResponse('watermarkPdfResponse', 'Watermark added successfully', result);
+                listDocuments(); // Refresh document list
+            } catch (error) {
+                setError('watermarkPdfResponse', error);
+            }
+        });
+
+        // Rotate PDF handler
+        document.getElementById('rotatePdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const documentId = document.getElementById('rotateDocumentId').value;
+            const angle = document.getElementById('rotationAngle').value;
+            
+            const formData = new FormData();
+            formData.append('angle', angle);
+            
+            try {
+                const result = await callAPI(`/documents/${documentId}/rotate`, formData, 'POST', true);
+                setResponse('rotatePdfResponse', 'PDF rotated successfully', result);
+                listDocuments(); // Refresh document list
+            } catch (error) {
+                setError('rotatePdfResponse', error);
+            }
+        });
+
+        // Extract text handler
+        document.getElementById('extractTextForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const documentId = document.getElementById('extractTextDocumentId').value;
+            
+            try {
+                const result = await callAPI(`/documents/${documentId}/extract-text`, null, 'GET');
+                setResponse('extractTextResponse', 'Text extracted successfully', result);
+            } catch (error) {
+                setError('extractTextResponse', error);
+            }
+        });
+
+        // Convert to EPUB handler
+        document.getElementById('epubForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const documentId = document.getElementById('epubDocumentId').value;
+            
+            try {
+                const result = await callAPI(`/documents/${documentId}/to-epub`, null, 'POST');
+                setResponse('epubResponse', 'Converted to EPUB successfully', result);
+            } catch (error) {
+                setError('epubResponse', error);
+            }
+        });
+
+        // Office to PDF Conversion Handlers
         document.getElementById('wordToPdfForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', document.getElementById('wordFile').files[0]);
+            const file = document.getElementById('wordFile').files[0];
+            if (!file) {
+                setError('wordToPdfResponse', new Error('Please select a Word document'));
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_BASE_URL}/documents/convert/word-to-pdf`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                const data = await response.json();
-                document.getElementById('wordToPdfResponse').textContent = JSON.stringify(data, null, 2);
+                const formData = new FormData();
+                formData.append('file', file);
+                const result = await callAPI('/documents/convert/word-to-pdf', formData, 'POST', true);
+                
+                // Show success message
+                setResponse('wordToPdfResponse', 'Word document converted successfully', result);
+                
+                // Create preview
+                const previewContainer = document.getElementById('wordPreview');
+                previewContainer.innerHTML = `
+                    <div class="alert alert-success">Conversion successful!</div>
+                    <div class="mt-3">
+                        <a href="${API_BASE_URL}${result.download_url}" class="btn btn-primary" target="_blank">
+                            Download PDF
+                        </a>
+                        <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
+                    </div>
+                `;
+                
+                listDocuments(); // Refresh document list
             } catch (error) {
-                document.getElementById('wordToPdfResponse').textContent = 'Error: ' + error.message;
+                setError('wordToPdfResponse', error);
             }
         });
 
         document.getElementById('excelToPdfForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', document.getElementById('excelFile').files[0]);
+            const file = document.getElementById('excelFile').files[0];
+            if (!file) {
+                setError('excelToPdfResponse', new Error('Please select an Excel document'));
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_BASE_URL}/documents/convert/excel-to-pdf`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                const data = await response.json();
-                document.getElementById('excelToPdfResponse').textContent = JSON.stringify(data, null, 2);
+                const formData = new FormData();
+                formData.append('file', file);
+                const result = await callAPI('/documents/convert/excel-to-pdf', formData, 'POST', true);
+                
+                // Show success message
+                setResponse('excelToPdfResponse', 'Excel document converted successfully', result);
+                
+                // Create preview
+                const previewContainer = document.getElementById('excelPreview');
+                previewContainer.innerHTML = `
+                    <div class="alert alert-success">Conversion successful!</div>
+                    <div class="mt-3">
+                        <a href="${API_BASE_URL}${result.download_url}" class="btn btn-primary" target="_blank">
+                            Download PDF
+                        </a>
+                        <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
+                    </div>
+                `;
+                
+                listDocuments(); // Refresh document list
             } catch (error) {
-                document.getElementById('excelToPdfResponse').textContent = 'Error: ' + error.message;
+                setError('excelToPdfResponse', error);
             }
         });
 
         document.getElementById('pptToPdfForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', document.getElementById('pptFile').files[0]);
+            const file = document.getElementById('pptFile').files[0];
+            if (!file) {
+                setError('pptToPdfResponse', new Error('Please select a PowerPoint document'));
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_BASE_URL}/documents/convert/ppt-to-pdf`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                const data = await response.json();
-                document.getElementById('pptToPdfResponse').textContent = JSON.stringify(data, null, 2);
+                const formData = new FormData();
+                formData.append('file', file);
+                const result = await callAPI('/documents/convert/ppt-to-pdf', formData, 'POST', true);
+                
+                // Show success message
+                setResponse('pptToPdfResponse', 'PowerPoint document converted successfully', result);
+                
+                // Create preview
+                const previewContainer = document.getElementById('pptPreview');
+                previewContainer.innerHTML = `
+                    <div class="alert alert-success">Conversion successful!</div>
+                    <div class="mt-3">
+                        <a href="${API_BASE_URL}${result.download_url}" class="btn btn-primary" target="_blank">
+                            Download PDF
+                        </a>
+                        <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
+                    </div>
+                `;
+                
+                listDocuments(); // Refresh document list
             } catch (error) {
-                document.getElementById('pptToPdfResponse').textContent = 'Error: ' + error.message;
+                setError('pptToPdfResponse', error);
             }
         });
 
-        // PDF Operations
-        document.getElementById('splitPdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('splitDocumentId').value}/split`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('splitPdfResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('splitPdfResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('compressPdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('compressDocumentId').value}/compress`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('compressPdfResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('compressPdfResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('mergePdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const documentIds = document.getElementById('mergeDocumentIds').value.split(',').map(id => id.trim());
-                const response = await fetch(`${API_BASE_URL}/documents/merge`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        document_ids: documentIds
-                    })
-                });
-                const data = await response.json();
-                document.getElementById('mergePdfResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('mergePdfResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('watermarkPdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('watermarkDocumentId').value}/watermark`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        watermark_text: document.getElementById('watermarkText').value
-                    })
-                });
-                const data = await response.json();
-                document.getElementById('watermarkPdfResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('watermarkPdfResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('rotatePdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('rotateDocumentId').value}/rotate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        angle: parseInt(document.getElementById('rotationAngle').value)
-                    })
-                });
-                const data = await response.json();
-                document.getElementById('rotatePdfResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('rotatePdfResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('extractTextForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('extractTextDocumentId').value}/extract-text`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('extractTextResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('extractTextResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        // AI Features
-        document.getElementById('chatForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/ai/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        document_id: document.getElementById('chatDocumentId').value,
-                        query: document.getElementById('chatMessage').value
-                    })
-                });
-                const data = await response.json();
-                document.getElementById('chatResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('chatResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('grammarForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/ai/grammar-check`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        text: document.getElementById('grammarText').value
-                    })
-                });
-                const data = await response.json();
-                document.getElementById('grammarResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('grammarResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('summarizeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/ai/summarize/${document.getElementById('summarizeDocumentId').value}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('summarizeResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('summarizeResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('epubForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await fetch(`${API_BASE_URL}/documents/${document.getElementById('epubDocumentId').value}/to-epub`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                document.getElementById('epubResponse').textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('epubResponse').textContent = 'Error: ' + error.message;
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = getToken();
+            if (token) {
+                // User is signed in
+                document.getElementById('authResponse').innerHTML = 
+                    `<div class="alert alert-success">Signed in</div>
+                     <button onclick="signOut()" class="btn btn-danger mt-2">Sign Out</button>`;
+                listDocuments(); // Load documents when signed in
+            } else {
+                // User is signed out
+                document.getElementById('authResponse').innerHTML = 
+                    `<div class="alert alert-info">Please sign in to continue</div>`;
             }
         });
     </script>
