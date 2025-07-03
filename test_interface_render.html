@@ -103,14 +103,51 @@
             max-width: 100%;
             height: auto;
         }
+        .google-btn {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+        .google-btn:hover {
+            background-color: #3367d6;
+        }
+        .google-btn:active {
+            background-color: #2a56c6;
+        }
+        .google-logo {
+            width: 18px;
+            height: 18px;
+        }
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
+    <script>
+        alert('Page loaded! JavaScript is working.');
+        console.log('Page loaded - JavaScript is working!');
+    </script>
     <div class="container mt-4">
-        <h1 class="mb-4">PDF API Test Interface</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>PDF API Test Interface</h1>
+            <div id="headerAuthSection" style="display: none;">
+                <button onclick="signOut()" class="btn btn-outline-danger">
+                    <i class="bi bi-box-arrow-right"></i> Sign Out
+                </button>
+            </div>
+        </div>
         
         <!-- Authentication Section -->
         <div class="auth-section">
@@ -151,7 +188,16 @@
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title">Google Sign In</h5>
-                            <button id="googleSignInBtn" class="btn btn-primary">Sign in with Google</button>
+                            <button id="googleSignInBtn" class="google-btn" onclick="handleGoogleSignIn()">
+                                <svg class="google-logo" viewBox="0 0 24 24">
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                </svg>
+                                Sign in with Google
+                            </button>
+                            <button onclick="alert('Test button works!')" class="btn btn-secondary mt-2">Test JavaScript</button>
                             <div class="response-area mt-3" id="authResponse"></div>
                         </div>
                     </div>
@@ -182,6 +228,7 @@
                         <h5 class="card-title">Your Documents</h5>
                         <button class="btn btn-primary" onclick="listDocuments()">Refresh List</button>
                         <div class="response-area mt-3" id="listResponse"></div>
+                        <div id="documentsTable"></div>
                     </div>
                 </div>
             </div>
@@ -303,21 +350,6 @@
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
-                        <h5 class="card-title">Split PDF</h5>
-                        <form id="splitPdfForm">
-                            <div class="mb-3">
-                                <label for="splitDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="splitDocumentId" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Split PDF</button>
-                        </form>
-                        <div class="response-area mt-3" id="splitPdfResponse"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card endpoint-card">
-                    <div class="card-body">
                         <h5 class="card-title">Compress PDF</h5>
                         <form id="compressPdfForm">
                             <div class="mb-3">
@@ -330,9 +362,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="row mt-3">
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
@@ -348,6 +377,9 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="row mt-3">
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
@@ -359,7 +391,7 @@
                             </div>
                             <div class="mb-3">
                                 <label for="watermarkText" class="form-label">Watermark Text</label>
-                                <input type="text" class="form-control" id="watermarkText" required>
+                                <input type="text" class="form-control" id="watermarkText" name="watermark_text" required>
                             </div>
                             <button type="submit" class="btn btn-primary">Add Watermark</button>
                         </form>
@@ -367,9 +399,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="row mt-3">
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
@@ -393,6 +422,9 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="row mt-3">
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
@@ -408,11 +440,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- AI Features Section -->
-        <h3 class="mt-4">AI Features</h3>
-        <div class="row">
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
@@ -432,24 +459,11 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card endpoint-card">
-                    <div class="card-body">
-                        <h5 class="card-title">Grammar Check</h5>
-                        <form id="grammarForm">
-                            <div class="mb-3">
-                                <label for="grammarText" class="form-label">Text to Check</label>
-                                <textarea class="form-control" id="grammarText" rows="4" required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Check Grammar</button>
-                        </form>
-                        <div class="response-area mt-3" id="grammarResponse"></div>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <div class="row mt-3">
+        <!-- AI Features Section -->
+        <h3 class="mt-4">AI Features</h3>
+        <div class="row">
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
@@ -481,12 +495,85 @@
                 </div>
             </div>
         </div>
+
+        <!-- Add Legacy PDF Endpoints Section -->
+        <h3 class="mt-4">Legacy PDF Endpoints <span class="badge bg-warning text-dark">Legacy</span></h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Upload PDF (Legacy)</h5>
+                        <form id="legacyUploadForm">
+                            <div class="mb-3">
+                                <input type="file" class="form-control" id="legacyFile" accept=".pdf" required>
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Upload (Legacy)</button>
+                        </form>
+                        <div class="response-area mt-3" id="legacyUploadResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">List PDFs (Legacy)</h5>
+                        <button class="btn btn-secondary" onclick="listLegacyPdfs()">Refresh List</button>
+                        <div class="response-area mt-3" id="legacyListResponse"></div>
+                        <div id="legacyPdfsTable"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Testing Section -->
+        <h3 class="mt-4">Error & Edge Case Testing</h3>
+        <div class="card endpoint-card">
+            <div class="card-body">
+                <h5 class="card-title">Send Custom Request</h5>
+                <form id="errorTestForm">
+                    <div class="mb-3">
+                        <label for="customEndpoint" class="form-label">Endpoint (relative to /api/v1)</label>
+                        <input type="text" class="form-control" id="customEndpoint" placeholder="/documents/upload" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customMethod" class="form-label">HTTP Method</label>
+                        <select class="form-control" id="customMethod">
+                            <option>GET</option>
+                            <option>POST</option>
+                            <option>DELETE</option>
+                            <option>PUT</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customBody" class="form-label">Request Body (JSON or leave blank)</label>
+                        <textarea class="form-control" id="customBody" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-danger">Send Request</button>
+                </form>
+                <div class="response-area mt-3" id="errorTestResponse"></div>
+                <div class="response-area mt-3" id="errorTestRaw"></div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // API base URL
         const API_BASE_URL = 'https://redanpdf-1.onrender.com/api/v1';
+        
+        // Google Sign-In handler function (moved to top)
+        function handleGoogleSignIn() {
+            console.log('Google Sign-In button clicked!'); // Debug log
+            try {
+                // Redirect to backend Google OAuth endpoint
+                const googleAuthUrl = `${API_BASE_URL}/auth/google/login`;
+                console.log('Redirecting to:', googleAuthUrl); // Debug log
+                window.location.href = googleAuthUrl;
+            } catch (error) {
+                console.error('Google Sign-In error:', error); // Debug log
+                setError('authResponse', error);
+            }
+        }
         
         // Get token from localStorage
         function getToken() {
@@ -607,8 +694,7 @@
 
                 const data = await response.json();
                 localStorage.setItem('token', data.access_token);
-                document.getElementById('authResponse').innerHTML = 
-                    `<div class="alert alert-success">Signed in as ${email}</div>`;
+                updateAuthUI(true); // Update UI for signed in state
                 listDocuments(); // Load documents after successful login
             } catch (error) {
                 setError('authResponse', error);
@@ -657,20 +743,100 @@
 
                 const loginData = await loginResponse.json();
                 localStorage.setItem('token', loginData.access_token);
-                document.getElementById('authResponse').innerHTML = 
-                    `<div class="alert alert-success">Registered and signed in as ${email}</div>`;
+                updateAuthUI(true); // Update UI for signed in state
                 listDocuments(); // Load documents after successful registration
             } catch (error) {
                 setError('authResponse', error);
             }
         });
 
-        // Sign Out
+        // Function to update authentication UI
+        function updateAuthUI(isSignedIn) {
+            const headerAuthSection = document.getElementById('headerAuthSection');
+            const authResponse = document.getElementById('authResponse');
+            
+            if (isSignedIn) {
+                // Show header logout button
+                headerAuthSection.style.display = 'block';
+                // Update auth response area
+                authResponse.innerHTML = 
+                    `<div class="alert alert-success">Signed in successfully</div>
+                     <button onclick="signOut()" class="btn btn-danger mt-2">Sign Out</button>`;
+            } else {
+                // Hide header logout button
+                headerAuthSection.style.display = 'none';
+                // Update auth response area
+                authResponse.innerHTML = 
+                    `<div class="alert alert-info">Please sign in to continue</div>`;
+            }
+        }
+
+        // Enhanced Sign Out function
         function signOut() {
+            console.log('Signing out...'); // Debug log
+            
+            // Clear authentication data
             localStorage.removeItem('token');
+            
+            // Clear all response areas
+            const responseAreas = [
+                'authResponse', 'uploadResponse', 'listResponse', 'documentDetailsResponse',
+                'deleteDocumentResponse', 'imageToPdfResponse', 'wordToPdfResponse',
+                'excelToPdfResponse', 'pptToPdfResponse', 'compressPdfResponse',
+                'mergePdfResponse', 'watermarkPdfResponse', 'rotatePdfResponse',
+                'extractTextResponse', 'chatResponse', 'summarizeResponse',
+                'epubResponse', 'legacyUploadResponse', 'legacyListResponse',
+                'errorTestResponse', 'errorTestRaw'
+            ];
+            
+            responseAreas.forEach(areaId => {
+                const element = document.getElementById(areaId);
+                if (element) {
+                    element.innerHTML = '';
+                }
+            });
+            
+            // Clear document tables
+            const tableElements = ['documentsTable', 'legacyPdfsTable'];
+            tableElements.forEach(tableId => {
+                const element = document.getElementById(tableId);
+                if (element) {
+                    element.innerHTML = '';
+                }
+            });
+            
+            // Clear preview containers
+            const previewContainers = ['wordPreview', 'excelPreview', 'pptPreview'];
+            previewContainers.forEach(containerId => {
+                const element = document.getElementById(containerId);
+                if (element) {
+                    element.innerHTML = '';
+                }
+            });
+            
+            // Reset auth UI
             document.getElementById('authResponse').innerHTML = 
-                `<div class="alert alert-info">Signed out successfully</div>`;
-            document.getElementById('listResponse').innerHTML = '';
+                `<div class="alert alert-success">Signed out successfully</div>
+                 <div class="mt-2">
+                     <small class="text-muted">You can sign in again using email/password or Google Sign-In above.</small>
+                 </div>`;
+            
+            // Clear form inputs
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.reset();
+            });
+            
+            // Clear file inputs
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            fileInputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Update UI to show signed out state
+            updateAuthUI(false);
+            
+            console.log('Sign out completed'); // Debug log
         }
 
         // Document upload handler
@@ -700,8 +866,83 @@
             try {
                 const documents = await callAPI('/documents/list');
                 setResponse('listResponse', 'Documents retrieved successfully', documents);
+                renderDocumentsTable(documents);
             } catch (error) {
                 setError('listResponse', error);
+            }
+        }
+
+        function renderDocumentsTable(documents) {
+            if (!Array.isArray(documents) || documents.length === 0) {
+                document.getElementById('documentsTable').innerHTML = '<div class="alert alert-info">No documents found.</div>';
+                return;
+            }
+            let html = '<table class="table table-bordered table-sm mt-2"><thead><tr><th>ID</th><th>Filename</th><th>Created</th><th>Actions</th></tr></thead><tbody>';
+            for (const doc of documents) {
+                html += `<tr>
+                    <td>${doc.id}</td>
+                    <td>${doc.filename}</td>
+                    <td>${doc.created_at ? new Date(doc.created_at).toLocaleString() : ''}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="downloadDocument('${doc.id}', '${doc.filename}')" title="Download"><i class="bi bi-download"></i> Download</button>
+                        <button class="btn btn-info btn-sm" onclick="previewDocument('${doc.id}')" title="Preview">Preview</button>
+                    </td>
+                </tr>`;
+            }
+            html += '</tbody></table><div id="previewModalContainer"></div>';
+            document.getElementById('documentsTable').innerHTML = html;
+        }
+
+        // Authenticated file download handler
+        async function downloadDocument(documentId, filename) {
+            try {
+                const token = getToken();
+                const response = await fetch(`${API_BASE_URL}/documents/${documentId}/download`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to download file');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename || `document_${documentId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (err) {
+                alert('Download failed: ' + err.message);
+            }
+        }
+
+        // Preview document handler
+        async function previewDocument(documentId) {
+            const modalHtml = `<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="previewModalLabel">Document Preview</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="previewModalBody">
+                            <div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            document.getElementById('previewModalContainer').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            modal.show();
+            try {
+                const response = await fetch(`${API_BASE_URL}/documents/${documentId}/preview`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                if (!response.ok) throw new Error('Failed to load preview');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                document.getElementById('previewModalBody').innerHTML = `<img src="${url}" class="img-fluid" alt="Preview">`;
+            } catch (err) {
+                document.getElementById('previewModalBody').innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
             }
         }
 
@@ -736,219 +977,386 @@
         });
 
         // Grammar check handler
-        document.getElementById('grammarForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const text = document.getElementById('grammarText').value;
-            
-            try {
-                const result = await callAPI('/ai/grammar-check', {
-                    text: text
-                }, 'POST');
-                setResponse('grammarResponse', 'Grammar check completed', result);
-            } catch (error) {
-                setError('grammarResponse', error);
-            }
-        });
+        const grammarForm = document.getElementById('grammarForm');
+        if (grammarForm) {
+            grammarForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const text = document.getElementById('grammarText').value;
+                
+                try {
+                    const result = await callAPI('/ai/grammar-check', {
+                        text: text
+                    }, 'POST');
+                    setResponse('grammarResponse', 'Grammar check completed', result);
+                } catch (error) {
+                    setError('grammarResponse', error);
+                }
+            });
+        }
 
         // Merge PDFs handler
-        document.getElementById('mergePdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const documentIds = document.getElementById('mergeDocumentIds').value.split(',').map(id => id.trim());
-            const outputFilename = document.getElementById('mergeOutputFilename').value || 'merged.pdf';
-            
-            const formData = new FormData();
-            documentIds.forEach(id => formData.append('document_ids', id));
-            formData.append('output_filename', outputFilename);
-            
-            try {
-                const result = await callAPI('/documents/merge', formData, 'POST', true);
-                setResponse('mergePdfResponse', 'PDFs merged successfully', result);
-                listDocuments(); // Refresh document list
-            } catch (error) {
-                setError('mergePdfResponse', error);
-            }
-        });
+        const mergePdfForm = document.getElementById('mergePdfForm');
+        if (mergePdfForm) {
+            mergePdfForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const documentIds = document.getElementById('mergeDocumentIds').value.split(',').map(id => id.trim());
+                const outputFilename = document.getElementById('mergeOutputFilename').value || 'merged.pdf';
+                
+                const formData = new FormData();
+                documentIds.forEach(id => formData.append('document_ids', id));
+                formData.append('output_filename', outputFilename);
+                
+                try {
+                    const result = await callAPI('/documents/merge', formData, 'POST', true);
+                    setResponse('mergePdfResponse', 'PDFs merged successfully', result);
+                    listDocuments(); // Refresh document list
+                } catch (error) {
+                    setError('mergePdfResponse', error);
+                }
+            });
+        }
 
         // Watermark PDF handler
-        document.getElementById('watermarkPdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const documentId = document.getElementById('watermarkDocumentId').value;
-            const watermarkText = document.getElementById('watermarkText').value;
-            
-            const formData = new FormData();
-            formData.append('text', watermarkText);
-            
-            try {
-                const result = await callAPI(`/documents/${documentId}/watermark`, formData, 'POST', true);
-                setResponse('watermarkPdfResponse', 'Watermark added successfully', result);
-                listDocuments(); // Refresh document list
-            } catch (error) {
-                setError('watermarkPdfResponse', error);
-            }
-        });
+        const watermarkPdfForm = document.getElementById('watermarkPdfForm');
+        if (watermarkPdfForm) {
+            watermarkPdfForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const documentId = document.getElementById('watermarkDocumentId').value;
+                const watermarkText = document.getElementById('watermarkText').value;
+                
+                const formData = new FormData();
+                formData.append('text', watermarkText);
+                
+                try {
+                    const result = await callAPI(`/documents/${documentId}/watermark`, formData, 'POST', true);
+                    setResponse('watermarkPdfResponse', 'Watermark added successfully', result);
+                    listDocuments(); // Refresh document list
+                } catch (error) {
+                    setError('watermarkPdfResponse', error);
+                }
+            });
+        }
 
         // Rotate PDF handler
-        document.getElementById('rotatePdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const documentId = document.getElementById('rotateDocumentId').value;
-            const angle = document.getElementById('rotationAngle').value;
-            
-            const formData = new FormData();
-            formData.append('angle', angle);
-            
-            try {
-                const result = await callAPI(`/documents/${documentId}/rotate`, formData, 'POST', true);
-                setResponse('rotatePdfResponse', 'PDF rotated successfully', result);
-                listDocuments(); // Refresh document list
-            } catch (error) {
-                setError('rotatePdfResponse', error);
-            }
-        });
+        const rotatePdfForm = document.getElementById('rotatePdfForm');
+        if (rotatePdfForm) {
+            rotatePdfForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const documentId = document.getElementById('rotateDocumentId').value;
+                const angle = document.getElementById('rotationAngle').value;
+                
+                const formData = new FormData();
+                formData.append('angle', angle);
+                
+                try {
+                    const result = await callAPI(`/documents/${documentId}/rotate`, formData, 'POST', true);
+                    setResponse('rotatePdfResponse', 'PDF rotated successfully', result);
+                    listDocuments(); // Refresh document list
+                } catch (error) {
+                    setError('rotatePdfResponse', error);
+                }
+            });
+        }
 
         // Extract text handler
-        document.getElementById('extractTextForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const documentId = document.getElementById('extractTextDocumentId').value;
-            
-            try {
-                const result = await callAPI(`/documents/${documentId}/extract-text`, null, 'GET');
-                setResponse('extractTextResponse', 'Text extracted successfully', result);
-            } catch (error) {
-                setError('extractTextResponse', error);
-            }
-        });
+        const extractTextForm = document.getElementById('extractTextForm');
+        if (extractTextForm) {
+            extractTextForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const documentId = document.getElementById('extractTextDocumentId').value;
+                
+                try {
+                    const result = await callAPI(`/documents/${documentId}/extract-text`, null, 'GET');
+                    setResponse('extractTextResponse', 'Text extracted successfully', result);
+                } catch (error) {
+                    setError('extractTextResponse', error);
+                }
+            });
+        }
 
         // Convert to EPUB handler
-        document.getElementById('epubForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const documentId = document.getElementById('epubDocumentId').value;
-            
-            try {
-                const result = await callAPI(`/documents/${documentId}/to-epub`, null, 'POST');
-                setResponse('epubResponse', 'Converted to EPUB successfully', result);
-            } catch (error) {
-                setError('epubResponse', error);
-            }
-        });
+        const epubForm = document.getElementById('epubForm');
+        if (epubForm) {
+            epubForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const documentId = document.getElementById('epubDocumentId').value;
+                
+                try {
+                    const result = await callAPI(`/documents/${documentId}/to-epub`, null, 'POST');
+                    setResponse('epubResponse', 'Converted to EPUB successfully', result);
+                    // Show only a download button for EPUB
+                    if (result && result.download_url && result.filename) {
+                        document.getElementById('epubResponse').innerHTML += `
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download EPUB</button>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    setError('epubResponse', error);
+                }
+            });
+        }
 
         // Office to PDF Conversion Handlers
-        document.getElementById('wordToPdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const file = document.getElementById('wordFile').files[0];
-            if (!file) {
-                setError('wordToPdfResponse', new Error('Please select a Word document'));
+        const wordToPdfForm = document.getElementById('wordToPdfForm');
+        if (wordToPdfForm) {
+            wordToPdfForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const file = document.getElementById('wordFile').files[0];
+                if (!file) {
+                    setError('wordToPdfResponse', new Error('Please select a Word document'));
+                    return;
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const result = await callAPI('/documents/convert/word-to-pdf', formData, 'POST', true);
+                    setResponse('wordToPdfResponse', 'Word document converted successfully', result);
+                    // Show download button and PDF preview
+                    if (result && result.download_url && result.filename) {
+                        const previewContainer = document.getElementById('wordPreview');
+                        previewContainer.innerHTML = `
+                            <div class="alert alert-success">Conversion successful!</div>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download PDF</button>
+                                <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
+                            </div>
+                        `;
+                    }
+                    listDocuments();
+                } catch (error) {
+                    setError('wordToPdfResponse', error);
+                }
+            });
+        }
+
+        const excelToPdfForm = document.getElementById('excelToPdfForm');
+        if (excelToPdfForm) {
+            excelToPdfForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const file = document.getElementById('excelFile').files[0];
+                if (!file) {
+                    setError('excelToPdfResponse', new Error('Please select an Excel document'));
+                    return;
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const result = await callAPI('/documents/convert/excel-to-pdf', formData, 'POST', true);
+                    setResponse('excelToPdfResponse', 'Excel document converted successfully', result);
+                    // Show download button and PDF preview
+                    if (result && result.download_url && result.filename) {
+                        const previewContainer = document.getElementById('excelPreview');
+                        previewContainer.innerHTML = `
+                            <div class="alert alert-success">Conversion successful!</div>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download PDF</button>
+                                <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
+                            </div>
+                        `;
+                    }
+                    listDocuments();
+                } catch (error) {
+                    setError('excelToPdfResponse', error);
+                }
+            });
+        }
+
+        const pptToPdfForm = document.getElementById('pptToPdfForm');
+        if (pptToPdfForm) {
+            pptToPdfForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const file = document.getElementById('pptFile').files[0];
+                if (!file) {
+                    setError('pptToPdfResponse', new Error('Please select a PowerPoint document'));
+                    return;
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const result = await callAPI('/documents/convert/ppt-to-pdf', formData, 'POST', true);
+                    setResponse('pptToPdfResponse', 'PowerPoint document converted successfully', result);
+                    // Show download button and PDF preview
+                    if (result && result.download_url && result.filename) {
+                        const previewContainer = document.getElementById('pptPreview');
+                        previewContainer.innerHTML = `
+                            <div class="alert alert-success">Conversion successful!</div>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download PDF</button>
+                                <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
+                            </div>
+                        `;
+                    }
+                    listDocuments();
+                } catch (error) {
+                    setError('pptToPdfResponse', error);
+                }
+            });
+        }
+
+        // Legacy PDF endpoints handlers
+        async function listLegacyPdfs() {
+            try {
+                const pdfs = await callLegacyAPI('/pdfs/');
+                renderLegacyPdfsTable(pdfs);
+            } catch (error) {
+                setError('legacyListResponse', error);
+            }
+        }
+        function renderLegacyPdfsTable(pdfs) {
+            if (!Array.isArray(pdfs) || pdfs.length === 0) {
+                document.getElementById('legacyPdfsTable').innerHTML = '<div class="alert alert-info">No legacy PDFs found.</div>';
                 return;
             }
-
+            let html = '<table class="table table-bordered table-sm mt-2"><thead><tr><th>ID</th><th>Filename</th><th>Upload Date</th><th>Actions</th></tr></thead><tbody>';
+            for (const pdf of pdfs) {
+                html += `<tr>
+                    <td>${pdf.id}</td>
+                    <td>${pdf.filename}</td>
+                    <td>${pdf.upload_date ? new Date(pdf.upload_date).toLocaleString() : ''}</td>
+                    <td>
+                        <a href="${API_BASE_URL.replace('/api/v1','')}/pdfs/${pdf.id}" class="btn btn-success btn-sm" target="_blank">Download</a>
+                        <button class="btn btn-danger btn-sm" onclick="deleteLegacyPdf(${pdf.id})">Delete</button>
+                    </td>
+                </tr>`;
+            }
+            html += '</tbody></table>';
+            document.getElementById('legacyPdfsTable').innerHTML = html;
+        }
+        async function deleteLegacyPdf(pdfId) {
+            if (!confirm('Are you sure you want to delete this legacy PDF?')) return;
             try {
+                await callLegacyAPI(`/pdfs/${pdfId}`, null, 'DELETE');
+                listLegacyPdfs();
+            } catch (error) {
+                setError('legacyListResponse', error);
+            }
+        }
+        
+        const legacyUploadForm = document.getElementById('legacyUploadForm');
+        if (legacyUploadForm) {
+            legacyUploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const fileInput = document.getElementById('legacyFile');
+                const file = fileInput.files[0];
+                if (!file) {
+                    setError('legacyUploadResponse', new Error('Please select a file'));
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('file', file);
-                const result = await callAPI('/documents/convert/word-to-pdf', formData, 'POST', true);
-                
-                // Show success message
-                setResponse('wordToPdfResponse', 'Word document converted successfully', result);
-                
-                // Create preview
-                const previewContainer = document.getElementById('wordPreview');
-                previewContainer.innerHTML = `
-                    <div class="alert alert-success">Conversion successful!</div>
-                    <div class="mt-3">
-                        <a href="${API_BASE_URL}${result.download_url}" class="btn btn-primary" target="_blank">
-                            Download PDF
-                        </a>
-                        <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
-                    </div>
-                `;
-                
-                listDocuments(); // Refresh document list
-            } catch (error) {
-                setError('wordToPdfResponse', error);
-            }
-        });
-
-        document.getElementById('excelToPdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const file = document.getElementById('excelFile').files[0];
-            if (!file) {
-                setError('excelToPdfResponse', new Error('Please select an Excel document'));
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const result = await callAPI('/documents/convert/excel-to-pdf', formData, 'POST', true);
-                
-                // Show success message
-                setResponse('excelToPdfResponse', 'Excel document converted successfully', result);
-                
-                // Create preview
-                const previewContainer = document.getElementById('excelPreview');
-                previewContainer.innerHTML = `
-                    <div class="alert alert-success">Conversion successful!</div>
-                    <div class="mt-3">
-                        <a href="${API_BASE_URL}${result.download_url}" class="btn btn-primary" target="_blank">
-                            Download PDF
-                        </a>
-                        <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
-                    </div>
-                `;
-                
-                listDocuments(); // Refresh document list
-            } catch (error) {
-                setError('excelToPdfResponse', error);
-            }
-        });
-
-        document.getElementById('pptToPdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const file = document.getElementById('pptFile').files[0];
-            if (!file) {
-                setError('pptToPdfResponse', new Error('Please select a PowerPoint document'));
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const result = await callAPI('/documents/convert/ppt-to-pdf', formData, 'POST', true);
-                
-                // Show success message
-                setResponse('pptToPdfResponse', 'PowerPoint document converted successfully', result);
-                
-                // Create preview
-                const previewContainer = document.getElementById('pptPreview');
-                previewContainer.innerHTML = `
-                    <div class="alert alert-success">Conversion successful!</div>
-                    <div class="mt-3">
-                        <a href="${API_BASE_URL}${result.download_url}" class="btn btn-primary" target="_blank">
-                            Download PDF
-                        </a>
-                        <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
-                    </div>
-                `;
-                
-                listDocuments(); // Refresh document list
-            } catch (error) {
-                setError('pptToPdfResponse', error);
-            }
-        });
+                try {
+                    await callLegacyAPI('/pdfs/upload', formData, 'POST', true);
+                    setResponse('legacyUploadResponse', 'Legacy file uploaded successfully');
+                    listLegacyPdfs();
+                } catch (error) {
+                    setError('legacyUploadResponse', error);
+                }
+            });
+        }
+        
+        async function callLegacyAPI(endpoint, data = null, method = 'GET', isFormData = false) {
+            const options = { method, headers: {} };
+            if (!isFormData) options.headers['Content-Type'] = 'application/json';
+            if (data) options.body = isFormData ? data : JSON.stringify(data);
+            const response = await fetch(`${API_BASE_URL.replace('/api/v1','')}${endpoint}`, options);
+            if (!response.ok) throw new Error('Legacy API request failed');
+            return await response.json();
+        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, checking for tokens...'); // Debug log
+            
+            checkForTokenInUrl(); // Check for token from Google OAuth
             const token = getToken();
             if (token) {
                 // User is signed in
-                document.getElementById('authResponse').innerHTML = 
-                    `<div class="alert alert-success">Signed in</div>
-                     <button onclick="signOut()" class="btn btn-danger mt-2">Sign Out</button>`;
+                updateAuthUI(true); // Update UI for signed in state
                 listDocuments(); // Load documents when signed in
             } else {
                 // User is signed out
-                document.getElementById('authResponse').innerHTML = 
-                    `<div class="alert alert-info">Please sign in to continue</div>`;
+                updateAuthUI(false); // Update UI for signed out state
             }
         });
+
+        // Check for token in URL (from Google OAuth callback)
+        function checkForTokenInUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            if (token) {
+                // Store the token
+                localStorage.setItem('token', token);
+                // Remove token from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Update UI
+                updateAuthUI(true); // Update UI for signed in state
+                listDocuments(); // Load documents
+            }
+        }
+
+        // Error testing handler
+        const errorTestForm = document.getElementById('errorTestForm');
+        if (errorTestForm) {
+            errorTestForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const endpoint = document.getElementById('customEndpoint').value;
+                const method = document.getElementById('customMethod').value;
+                let body = document.getElementById('customBody').value;
+                let data = null;
+                try {
+                    if (body) {
+                        data = JSON.parse(body);
+                    }
+                } catch (err) {
+                    setError('errorTestResponse', new Error('Invalid JSON in request body'));
+                    return;
+                }
+                try {
+                    const token = getToken();
+                    const headers = { 'Authorization': `Bearer ${token}` };
+                    if (method !== 'GET' && method !== 'DELETE') headers['Content-Type'] = 'application/json';
+                    const options = { method, headers };
+                    if (data) options.body = JSON.stringify(data);
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                    const raw = await response.text();
+                    let json = null;
+                    try { json = JSON.parse(raw); } catch {}
+                    setResponse('errorTestResponse', 'Custom request sent', json || raw);
+                    document.getElementById('errorTestRaw').innerHTML = `<pre>${raw}</pre>`;
+                } catch (error) {
+                    setError('errorTestResponse', error);
+                }
+            });
+        }
+
+        function downloadDocumentFromUrl(downloadUrl, filename) {
+            const token = getToken();
+            fetch(`${API_BASE_URL}${downloadUrl}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to download file');
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename || 'converted.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            })
+            .catch(err => {
+                alert('Download failed: ' + err.message);
+            });
+        }
     </script>
 </body>
 </html> 

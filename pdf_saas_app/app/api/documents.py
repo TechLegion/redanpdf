@@ -15,6 +15,7 @@ import time
 import logging
 import io
 import fitz  # PyMuPDF
+import hashlib
 
 from pdf_saas_app.app.db.session import get_db
 from pdf_saas_app.app.db.models import User, Document
@@ -61,6 +62,24 @@ async def upload_document(
         with temp_file as buffer:
             shutil.copyfileobj(file.file, buffer)
         
+        # Compute file hash for deduplication
+        def compute_file_hash(file_path):
+            hasher = hashlib.sha256()
+            with open(file_path, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        file_hash = compute_file_hash(temp_file.name)
+        
+        # Check for duplicate for this user
+        existing_doc = db.query(Document).filter_by(file_hash=file_hash, owner_id=current_user.id).first()
+        if existing_doc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Duplicate file. Document already uploaded.",
+                headers={"X-Existing-Document-ID": existing_doc.id}
+            )
+        
         # Get file size
         file_size = os.path.getsize(temp_file.name)
         
@@ -75,7 +94,8 @@ async def upload_document(
             file_size=file_size,
             mime_type="application/pdf",
             file_type="pdf",
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            file_hash=file_hash
         )
         
         db.add(db_document)
@@ -166,17 +186,14 @@ async def download_document(
     Download a document by ID (authenticated endpoint)
     """
     document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
-    
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found"
         )
-    
     # Update last accessed timestamp
     document.last_accessed = func.now()
     db.commit()
-    
     # Get the file from storage and return it
     local_file_path = storage_service.get_file(document.file_path)
     return FileResponse(
@@ -225,6 +242,7 @@ async def merge_documents(
         # Save document in database
         db_document = Document(
             filename=output_filename,
+            original_filename=output_filename,
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",

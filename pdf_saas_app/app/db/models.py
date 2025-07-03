@@ -38,6 +38,7 @@ class Document(Base):
     conversion_type = Column(String)  # Type of conversion (e.g., 'word_to_pdf')
     created_at = Column(DateTime, default=datetime.utcnow)
     last_accessed = Column(DateTime, default=datetime.utcnow)
+    file_hash = Column(String, index=True)  # SHA256 hash of file contents for deduplication
     
     owner_id = Column(String, ForeignKey("users.id"))
     owner = relationship("User", back_populates="documents")
