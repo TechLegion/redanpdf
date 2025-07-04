@@ -191,16 +191,28 @@ async def download_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found"
         )
-    # Update last accessed timestamp
-    document.last_accessed = func.now()
-    db.commit()
-    # Get the file from storage and return it
-    local_file_path = storage_service.get_file(document.file_path)
-    return FileResponse(
-        local_file_path,
-        media_type="application/pdf",
-        filename=document.filename
-    )
+    
+    try:
+        # Update last accessed timestamp
+        document.last_accessed = func.now()
+        db.commit()
+        # Get the file from storage and return it
+        local_file_path = storage_service.get_file(document.file_path)
+        return FileResponse(
+            local_file_path,
+            media_type="application/pdf",
+            filename=document.filename
+        )
+    except FileNotFoundError as e:
+        logger.error(f"File not found for document {document_id}: {str(e)}")
+        # Delete the orphaned database record
+        db.delete(document)
+        db.commit()
+        logger.info(f"Deleted orphaned document record: {document_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="The file is no longer available. The document record has been cleaned up. Please upload the file again."
+        )
 
 @router.post("/merge")
 async def merge_documents(
@@ -222,9 +234,20 @@ async def merge_documents(
                 detail=f"Document with ID {doc_id} not found or not owned by user"
             )
         
-        # Get file from storage
-        local_file_path = storage_service.get_file(document.file_path)
-        pdf_paths.append(local_file_path)
+        try:
+            # Get file from storage
+            local_file_path = storage_service.get_file(document.file_path)
+            pdf_paths.append(local_file_path)
+        except FileNotFoundError as e:
+            logger.error(f"File not found for document {doc_id}: {str(e)}")
+            # Delete the orphaned database record
+            db.delete(document)
+            db.commit()
+            logger.info(f"Deleted orphaned document record: {doc_id}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Document {doc_id} is no longer available. The document record has been cleaned up. Please upload the file again."
+            )
     
     # Create temp output file
     output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
@@ -324,6 +347,16 @@ async def add_watermark(
         
         return db_document
         
+    except FileNotFoundError as e:
+        logger.error(f"File not found for document {document_id}: {str(e)}")
+        # Delete the orphaned database record
+        db.delete(document)
+        db.commit()
+        logger.info(f"Deleted orphaned document record: {document_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="The original file is no longer available. The document record has been cleaned up. Please upload the file again."
+        )
     except Exception as e:
         logger.error(f"Error adding watermark to PDF {document_id}: {str(e)}")
         raise HTTPException(
@@ -370,8 +403,21 @@ async def extract_text_from_pdf(
     document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    text = pdf_processor.extract_text(document.file_path)
-    return {"text": text}
+    
+    try:
+        local_file_path = storage_service.get_file(document.file_path)
+        text = pdf_processor.extract_text(local_file_path)
+        return {"text": text}
+    except FileNotFoundError as e:
+        logger.error(f"File not found for document {document_id}: {str(e)}")
+        # Delete the orphaned database record
+        db.delete(document)
+        db.commit()
+        logger.info(f"Deleted orphaned document record: {document_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="The file is no longer available. The document record has been cleaned up. Please upload the file again."
+        )
 
 @router.post("/{document_id}/compress", response_model=DocumentResponse)
 async def compress_pdf(
@@ -427,6 +473,16 @@ async def compress_pdf(
         
         return db_document
         
+    except FileNotFoundError as e:
+        logger.error(f"File not found for document {document_id}: {str(e)}")
+        # Delete the orphaned database record
+        db.delete(document)
+        db.commit()
+        logger.info(f"Deleted orphaned document record: {document_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="The original file is no longer available. The document record has been cleaned up. Please upload the file again."
+        )
     except Exception as e:
         logger.error(f"Error compressing PDF {document_id}: {str(e)}")
         raise HTTPException(
@@ -481,11 +537,11 @@ async def pdf_to_epub(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    local_file_path = storage_service.get_file(document.file_path)
-    output_filename = document.filename.rsplit(".", 1)[0] + ".epub"
-    output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.epub').name
-    
     try:
+        local_file_path = storage_service.get_file(document.file_path)
+        output_filename = document.filename.rsplit(".", 1)[0] + ".epub"
+        output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.epub').name
+        
         pdf_processor.pdf_to_epub(local_file_path, output_path)
         
         # Create a new document record for the EPUB
@@ -508,8 +564,18 @@ async def pdf_to_epub(
             "download_url": f"/api/v1/documents/{epub_doc.id}/download",
             "filename": output_filename
         }
+    except FileNotFoundError as e:
+        logger.error(f"File not found for document {document_id}: {str(e)}")
+        # Delete the orphaned database record
+        db.delete(document)
+        db.commit()
+        logger.info(f"Deleted orphaned document record: {document_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="The original file is no longer available. The document record has been cleaned up. Please upload the file again."
+        )
     finally:
-        if os.path.exists(output_path):
+        if 'output_path' in locals() and os.path.exists(output_path):
             os.remove(output_path)
 
 @router.post("/{document_id}/to-jpg")
@@ -566,6 +632,16 @@ async def pdf_to_jpg(
             }
         finally:
             shutil.rmtree(output_dir, ignore_errors=True)
+    except FileNotFoundError as e:
+        logger.error(f"File not found for document {document_id}: {str(e)}")
+        # Delete the orphaned database record
+        db.delete(document)
+        db.commit()
+        logger.info(f"Deleted orphaned document record: {document_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="The original file is no longer available. The document record has been cleaned up. Please upload the file again."
+        )
     except Exception as e:
         logger.error(f"Error in pdf_to_jpg: {str(e)}")
         if "poppler" in str(e).lower():
@@ -1012,6 +1088,16 @@ async def get_document_preview(
         return Response(
             content=img_byte_arr.getvalue(),
             media_type="image/jpeg"
+        )
+    except FileNotFoundError as e:
+        logger.error(f"File not found for document {document_id}: {str(e)}")
+        # Delete the orphaned database record
+        db.delete(document)
+        db.commit()
+        logger.info(f"Deleted orphaned document record: {document_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="The file is no longer available. The document record has been cleaned up. Please upload the file again."
         )
     except Exception as e:
         logger.error(f"Error generating preview: {str(e)}")

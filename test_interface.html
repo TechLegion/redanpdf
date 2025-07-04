@@ -281,30 +281,41 @@
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
-                        <h5 class="card-title">Split PDF</h5>
-                        <form id="splitPdfForm">
+                        <h5 class="card-title">Merge Documents</h5>
+                        <form id="mergeForm">
                             <div class="mb-3">
-                                <label for="splitDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="splitDocumentId" required>
+                                <label for="mergeDocumentIds" class="form-label">Document IDs (comma-separated)</label>
+                                <input type="text" class="form-control" id="mergeDocumentIds" placeholder="id1,id2,id3" required>
                             </div>
-                            <button type="submit" class="btn btn-primary">Split PDF</button>
+                            <div class="mb-3">
+                                <label for="mergeOutputFilename" class="form-label">Output Filename</label>
+                                <input type="text" class="form-control" id="mergeOutputFilename" value="merged.pdf">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Merge Documents</button>
                         </form>
-                        <div class="response-area mt-3" id="splitPdfResponse"></div>
+                        <div class="response-area mt-3" id="mergeResponse"></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
-                        <h5 class="card-title">Compress PDF</h5>
-                        <form id="compressPdfForm">
+                        <h5 class="card-title">Add Watermark</h5>
+                        <form id="watermarkForm">
                             <div class="mb-3">
-                                <label for="compressDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="compressDocumentId" required>
+                                <label for="watermarkDocumentId" class="form-label">Document ID</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="watermarkDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('watermarkDocumentId')">Get ID</button>
+                                </div>
                             </div>
-                            <button type="submit" class="btn btn-primary">Compress PDF</button>
+                            <div class="mb-3">
+                                <label for="watermarkText" class="form-label">Watermark Text</label>
+                                <input type="text" class="form-control" id="watermarkText" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add Watermark</button>
                         </form>
-                        <div class="response-area mt-3" id="compressPdfResponse"></div>
+                        <div class="response-area mt-3" id="watermarkResponse"></div>
                     </div>
                 </div>
             </div>
@@ -314,23 +325,18 @@
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
-                        <h5 class="card-title">Rotate PDF</h5>
-                        <form id="rotatePdfForm">
+                        <h5 class="card-title">Compress PDF</h5>
+                        <form id="compressPdfForm">
                             <div class="mb-3">
-                                <label for="rotateDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="rotateDocumentId" required>
+                                <label for="compressDocumentId" class="form-label">Document ID</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="compressDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('compressDocumentId')">Get ID</button>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label for="rotationAngle" class="form-label">Rotation Angle</label>
-                                <select class="form-control" id="rotationAngle" required>
-                                    <option value="90">90°</option>
-                                    <option value="180">180°</option>
-                                    <option value="270">270°</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Rotate PDF</button>
+                            <button type="submit" class="btn btn-primary">Compress PDF</button>
                         </form>
-                        <div class="response-area mt-3" id="rotatePdfResponse"></div>
+                        <div class="response-area mt-3" id="compressPdfResponse"></div>
                     </div>
                 </div>
             </div>
@@ -341,11 +347,53 @@
                         <form id="epubForm">
                             <div class="mb-3">
                                 <label for="epubDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="epubDocumentId" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="epubDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('epubDocumentId')">Get ID</button>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary">Convert to EPUB</button>
                         </form>
                         <div class="response-area mt-3" id="epubResponse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Convert to JPG</h5>
+                        <form id="jpgForm">
+                            <div class="mb-3">
+                                <label for="jpgDocumentId" class="form-label">Document ID</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="jpgDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('jpgDocumentId')">Get ID</button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Convert to JPG</button>
+                        </form>
+                        <div class="response-area mt-3" id="jpgResponse"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Extract Text</h5>
+                        <form id="extractTextForm">
+                            <div class="mb-3">
+                                <label for="extractTextDocumentId" class="form-label">Document ID</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="extractTextDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('extractTextDocumentId')">Get ID</button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Extract Text</button>
+                        </form>
+                        <div class="response-area mt-3" id="extractTextResponse"></div>
                     </div>
                 </div>
             </div>
@@ -361,7 +409,10 @@
                         <form id="chatForm">
                             <div class="mb-3">
                                 <label for="chatDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="chatDocumentId" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="chatDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('chatDocumentId')">Get ID</button>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="chatMessage" class="form-label">Message</label>
@@ -392,7 +443,7 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'https://redanpdf-1q1l.onrender.com/api/v1';
+        const API_BASE_URL = 'https://redanpdf-1.onrender.com/api/v1';
         let token = localStorage.getItem('token');
 
         // Firebase configuration
@@ -456,8 +507,25 @@
             });
         }
 
+        // Function to populate document ID fields with actual document IDs
+        async function populateDocumentId(fieldId) {
+            try {
+                const response = await callApi('/documents/list');
+                if (response && response.length > 0) {
+                    const documentId = response[0].id; // Get the first document ID
+                    document.getElementById(fieldId).value = documentId;
+                    console.log(`Populated ${fieldId} with document ID: ${documentId}`);
+                } else {
+                    alert('No documents found. Please upload a document first.');
+                }
+            } catch (error) {
+                alert('Error getting document ID: ' + error.message);
+            }
+        }
+
         // Helper function to make API calls
         async function callApi(endpoint, method = 'GET', data = null, isFormData = false) {
+            console.log(`callApi called with: ${method} ${endpoint}`); // Debug log
             const token = localStorage.getItem('token');
             if (!token) {
                 throw new Error('Not authenticated. Please sign in with Google.');
@@ -480,7 +548,9 @@
                 options.body = isFormData ? data : JSON.stringify(data);
             }
 
+            console.log(`Making request to: ${API_BASE_URL}${endpoint}`); // Debug log
             const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            console.log(`Response status: ${response.status}`); // Debug log
             
             if (response.status === 401) {
                 // Token expired or invalid
@@ -671,35 +741,44 @@
         });
 
         // PDF Operations
-        document.getElementById('splitPdfForm').addEventListener('submit', async (e) => {
+        document.getElementById('mergeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
-                const response = await callApi(`/documents/${document.getElementById('splitDocumentId').value}/split`, 'POST');
-                document.getElementById('splitPdfResponse').textContent = JSON.stringify(response, null, 2);
+                const formData = new FormData();
+                const documentIds = document.getElementById('mergeDocumentIds').value.split(',').map(id => id.trim());
+                documentIds.forEach(id => formData.append('document_ids', id));
+                formData.append('output_filename', document.getElementById('mergeOutputFilename').value);
+                const response = await callApi('/documents/merge', 'POST', formData, true);
+                document.getElementById('mergeResponse').textContent = JSON.stringify(response, null, 2);
             } catch (error) {
-                document.getElementById('splitPdfResponse').textContent = 'Error: ' + error.message;
+                document.getElementById('mergeResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('watermarkForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = new FormData();
+                formData.append('watermark_text', document.getElementById('watermarkText').value);
+                const response = await callApi(`/documents/${document.getElementById('watermarkDocumentId').value}/watermark`, 'POST', formData, true);
+                document.getElementById('watermarkResponse').textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('watermarkResponse').textContent = 'Error: ' + error.message;
             }
         });
 
         document.getElementById('compressPdfForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            console.log('Compress button clicked!'); // Debug log
             try {
-                const response = await callApi(`/documents/${document.getElementById('compressDocumentId').value}/compress`, 'POST');
+                const documentId = document.getElementById('compressDocumentId').value;
+                console.log('Attempting to compress document:', documentId); // Debug log
+                const response = await callApi(`/documents/${documentId}/compress`, 'POST');
+                console.log('Compress response:', response); // Debug log
                 document.getElementById('compressPdfResponse').textContent = JSON.stringify(response, null, 2);
             } catch (error) {
+                console.error('Compress error:', error); // Debug log
                 document.getElementById('compressPdfResponse').textContent = 'Error: ' + error.message;
-            }
-        });
-
-        document.getElementById('rotatePdfForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const response = await callApi(`/documents/${document.getElementById('rotateDocumentId').value}/rotate`, 'POST', {
-                    rotation: parseInt(document.getElementById('rotationAngle').value)
-                });
-                document.getElementById('rotatePdfResponse').textContent = JSON.stringify(response, null, 2);
-            } catch (error) {
-                document.getElementById('rotatePdfResponse').textContent = 'Error: ' + error.message;
             }
         });
 
@@ -710,6 +789,26 @@
                 document.getElementById('epubResponse').textContent = JSON.stringify(response, null, 2);
             } catch (error) {
                 document.getElementById('epubResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('jpgForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await callApi(`/documents/${document.getElementById('jpgDocumentId').value}/to-jpg`, 'POST');
+                document.getElementById('jpgResponse').textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('jpgResponse').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        document.getElementById('extractTextForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await callApi(`/documents/${document.getElementById('extractTextDocumentId').value}/extract-text`, 'GET');
+                document.getElementById('extractTextResponse').textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('extractTextResponse').textContent = 'Error: ' + error.message;
             }
         });
 

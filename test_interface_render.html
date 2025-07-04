@@ -135,10 +135,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
-    <script>
-        alert('Page loaded! JavaScript is working.');
-        console.log('Page loaded - JavaScript is working!');
-    </script>
+
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>PDF API Test Interface</h1>
@@ -354,7 +351,10 @@
                         <form id="compressPdfForm">
                             <div class="mb-3">
                                 <label for="compressDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="compressDocumentId" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="compressDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('compressDocumentId')">Get ID</button>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary">Compress PDF</button>
                         </form>
@@ -387,7 +387,10 @@
                         <form id="watermarkPdfForm">
                             <div class="mb-3">
                                 <label for="watermarkDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="watermarkDocumentId" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="watermarkDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('watermarkDocumentId')">Get ID</button>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="watermarkText" class="form-label">Watermark Text</label>
@@ -402,23 +405,18 @@
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
-                        <h5 class="card-title">Rotate PDF</h5>
-                        <form id="rotatePdfForm">
+                        <h5 class="card-title">Extract Text (OCR)</h5>
+                        <form id="extractTextForm">
                             <div class="mb-3">
-                                <label for="rotateDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="rotateDocumentId" required>
+                                <label for="extractTextDocumentId" class="form-label">Document ID</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="extractTextDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('extractTextDocumentId')">Get ID</button>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label for="rotationAngle" class="form-label">Rotation Angle (degrees)</label>
-                                <select class="form-control" id="rotationAngle" required>
-                                    <option value="90">90°</option>
-                                    <option value="180">180°</option>
-                                    <option value="270">270°</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Rotate PDF</button>
+                            <button type="submit" class="btn btn-primary">Extract Text</button>
                         </form>
-                        <div class="response-area mt-3" id="rotatePdfResponse"></div>
+                        <div class="response-area mt-3" id="extractTextResponse"></div>
                     </div>
                 </div>
             </div>
@@ -428,26 +426,14 @@
             <div class="col-md-6">
                 <div class="card endpoint-card">
                     <div class="card-body">
-                        <h5 class="card-title">Extract Text (OCR)</h5>
-                        <form id="extractTextForm">
-                            <div class="mb-3">
-                                <label for="extractTextDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="extractTextDocumentId" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Extract Text</button>
-                        </form>
-                        <div class="response-area mt-3" id="extractTextResponse"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card endpoint-card">
-                    <div class="card-body">
                         <h5 class="card-title">Chat with PDF</h5>
                         <form id="chatForm">
                             <div class="mb-3">
                                 <label for="chatDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="chatDocumentId" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="chatDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('chatDocumentId')">Get ID</button>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="chatMessage" class="form-label">Message</label>
@@ -471,7 +457,10 @@
                         <form id="summarizeForm">
                             <div class="mb-3">
                                 <label for="summarizeDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="summarizeDocumentId" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="summarizeDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('summarizeDocumentId')">Get ID</button>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary">Summarize</button>
                         </form>
@@ -486,7 +475,10 @@
                         <form id="epubForm">
                             <div class="mb-3">
                                 <label for="epubDocumentId" class="form-label">Document ID</label>
-                                <input type="text" class="form-control" id="epubDocumentId" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="epubDocumentId" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="populateDocumentId('epubDocumentId')">Get ID</button>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary">Convert to EPUB</button>
                         </form>
@@ -581,7 +573,8 @@
         }
 
         // Generic API call function
-        async function callAPI(endpoint, data = null, method = 'GET', isFormData = false) {
+        async function callApi(endpoint, data = null, method = 'GET', isFormData = false) {
+            console.log(`callApi called with: ${method} ${endpoint}`); // Debug log
             try {
                 const token = getToken();
                 if (!token) {
@@ -609,6 +602,7 @@
                 console.log(`Making ${method} request to ${API_BASE_URL}${endpoint}`);  // Debug log
 
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                console.log(`Response status: ${response.status}`); // Debug log
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
@@ -783,10 +777,9 @@
                 'authResponse', 'uploadResponse', 'listResponse', 'documentDetailsResponse',
                 'deleteDocumentResponse', 'imageToPdfResponse', 'wordToPdfResponse',
                 'excelToPdfResponse', 'pptToPdfResponse', 'compressPdfResponse',
-                'mergePdfResponse', 'watermarkPdfResponse', 'rotatePdfResponse',
-                'extractTextResponse', 'chatResponse', 'summarizeResponse',
-                'epubResponse', 'legacyUploadResponse', 'legacyListResponse',
-                'errorTestResponse', 'errorTestRaw'
+                'mergePdfResponse', 'watermarkPdfResponse', 'extractTextResponse',
+                'chatResponse', 'summarizeResponse', 'epubResponse', 'legacyUploadResponse',
+                'legacyListResponse', 'errorTestResponse', 'errorTestRaw'
             ];
             
             responseAreas.forEach(areaId => {
@@ -853,7 +846,7 @@
             formData.append('file', file);
 
             try {
-                const result = await callAPI('/documents/upload', formData, 'POST', true);
+                const result = await callApi('/documents/upload', formData, 'POST', true);
                 setResponse('uploadResponse', 'File uploaded successfully', result);
                 listDocuments(); // Refresh document list
             } catch (error) {
@@ -864,11 +857,27 @@
         // List documents
         async function listDocuments() {
             try {
-                const documents = await callAPI('/documents/list');
+                const documents = await callApi('/documents/list');
                 setResponse('listResponse', 'Documents retrieved successfully', documents);
                 renderDocumentsTable(documents);
             } catch (error) {
                 setError('listResponse', error);
+            }
+        }
+
+        // Function to populate document ID fields with actual document IDs
+        async function populateDocumentId(fieldId) {
+            try {
+                const documents = await callApi('/documents/list');
+                if (documents && documents.length > 0) {
+                    const documentId = documents[0].id; // Get the first document ID
+                    document.getElementById(fieldId).value = documentId;
+                    console.log(`Populated ${fieldId} with document ID: ${documentId}`);
+                } else {
+                    alert('No documents found. Please upload a document first.');
+                }
+            } catch (error) {
+                alert('Error getting document ID: ' + error.message);
             }
         }
 
@@ -953,7 +962,7 @@
             const message = document.getElementById('chatMessage').value;
             
             try {
-                const result = await callAPI('/ai/chat', {
+                const result = await callApi('/ai/chat', {
                     query: message,
                     document_id: documentId
                 }, 'POST');
@@ -969,7 +978,7 @@
             const documentId = document.getElementById('summarizeDocumentId').value;
             
             try {
-                const result = await callAPI(`/ai/summarize/${documentId}`, null, 'POST');
+                const result = await callApi(`/ai/summarize/${documentId}`, null, 'POST');
                 setResponse('summarizeResponse', 'Summary generated', result);
             } catch (error) {
                 setError('summarizeResponse', error);
@@ -984,7 +993,7 @@
                 const text = document.getElementById('grammarText').value;
                 
                 try {
-                    const result = await callAPI('/ai/grammar-check', {
+                    const result = await callApi('/ai/grammar-check', {
                         text: text
                     }, 'POST');
                     setResponse('grammarResponse', 'Grammar check completed', result);
@@ -1007,7 +1016,7 @@
                 formData.append('output_filename', outputFilename);
                 
                 try {
-                    const result = await callAPI('/documents/merge', formData, 'POST', true);
+                    const result = await callApi('/documents/merge', formData, 'POST', true);
                     setResponse('mergePdfResponse', 'PDFs merged successfully', result);
                     listDocuments(); // Refresh document list
                 } catch (error) {
@@ -1025,35 +1034,14 @@
                 const watermarkText = document.getElementById('watermarkText').value;
                 
                 const formData = new FormData();
-                formData.append('text', watermarkText);
+                formData.append('watermark_text', watermarkText);
                 
                 try {
-                    const result = await callAPI(`/documents/${documentId}/watermark`, formData, 'POST', true);
+                    const result = await callApi(`/documents/${documentId}/watermark`, formData, 'POST', true);
                     setResponse('watermarkPdfResponse', 'Watermark added successfully', result);
                     listDocuments(); // Refresh document list
                 } catch (error) {
                     setError('watermarkPdfResponse', error);
-                }
-            });
-        }
-
-        // Rotate PDF handler
-        const rotatePdfForm = document.getElementById('rotatePdfForm');
-        if (rotatePdfForm) {
-            rotatePdfForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const documentId = document.getElementById('rotateDocumentId').value;
-                const angle = document.getElementById('rotationAngle').value;
-                
-                const formData = new FormData();
-                formData.append('angle', angle);
-                
-                try {
-                    const result = await callAPI(`/documents/${documentId}/rotate`, formData, 'POST', true);
-                    setResponse('rotatePdfResponse', 'PDF rotated successfully', result);
-                    listDocuments(); // Refresh document list
-                } catch (error) {
-                    setError('rotatePdfResponse', error);
                 }
             });
         }
@@ -1066,7 +1054,7 @@
                 const documentId = document.getElementById('extractTextDocumentId').value;
                 
                 try {
-                    const result = await callAPI(`/documents/${documentId}/extract-text`, null, 'GET');
+                    const result = await callApi(`/documents/${documentId}/extract-text`, null, 'GET');
                     setResponse('extractTextResponse', 'Text extracted successfully', result);
                 } catch (error) {
                     setError('extractTextResponse', error);
@@ -1082,7 +1070,7 @@
                 const documentId = document.getElementById('epubDocumentId').value;
                 
                 try {
-                    const result = await callAPI(`/documents/${documentId}/to-epub`, null, 'POST');
+                    const result = await callApi(`/documents/${documentId}/to-epub`, null, 'POST');
                     setResponse('epubResponse', 'Converted to EPUB successfully', result);
                     // Show only a download button for EPUB
                     if (result && result.download_url && result.filename) {
@@ -1112,7 +1100,7 @@
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    const result = await callAPI('/documents/convert/word-to-pdf', formData, 'POST', true);
+                    const result = await callApi('/documents/convert/word-to-pdf', formData, 'POST', true);
                     setResponse('wordToPdfResponse', 'Word document converted successfully', result);
                     // Show download button and PDF preview
                     if (result && result.download_url && result.filename) {
@@ -1145,7 +1133,7 @@
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    const result = await callAPI('/documents/convert/excel-to-pdf', formData, 'POST', true);
+                    const result = await callApi('/documents/convert/excel-to-pdf', formData, 'POST', true);
                     setResponse('excelToPdfResponse', 'Excel document converted successfully', result);
                     // Show download button and PDF preview
                     if (result && result.download_url && result.filename) {
@@ -1178,7 +1166,7 @@
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    const result = await callAPI('/documents/convert/ppt-to-pdf', formData, 'POST', true);
+                    const result = await callApi('/documents/convert/ppt-to-pdf', formData, 'POST', true);
                     setResponse('pptToPdfResponse', 'PowerPoint document converted successfully', result);
                     // Show download button and PDF preview
                     if (result && result.download_url && result.filename) {
@@ -1357,6 +1345,21 @@
                 alert('Download failed: ' + err.message);
             });
         }
+
+        document.getElementById('compressPdfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('Compress button clicked!'); // Debug log
+            try {
+                const documentId = document.getElementById('compressDocumentId').value;
+                console.log('Attempting to compress document:', documentId); // Debug log
+                const response = await callApi(`/documents/${documentId}/compress`, 'POST');
+                console.log('Compress response:', response); // Debug log
+                document.getElementById('compressPdfResponse').textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                console.error('Compress error:', error); // Debug log
+                document.getElementById('compressPdfResponse').textContent = 'Error: ' + error.message;
+            }
+        });
     </script>
 </body>
 </html> 
