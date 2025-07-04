@@ -657,7 +657,8 @@ async def pdf_to_jpg(
 @router.post("/convert/word-to-pdf", response_model=DocumentResponse)
 async def word_to_pdf(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Convert Word document to PDF"""
     try:
@@ -688,12 +689,13 @@ async def word_to_pdf(
                         detail=f"Conversion failed: {result.stderr}"
                     )
                 
-                # Create document record
+                # Create document record with owner
                 doc = Document(
                     filename=f"{os.path.splitext(file.filename)[0]}_{uuid.uuid4()}.pdf",
                     original_filename=file.filename,
                     file_type="pdf",
-                    conversion_type="word_to_pdf"
+                    conversion_type="word_to_pdf",
+                    owner_id=current_user.id
                 )
                 db.add(doc)
                 db.commit()
@@ -749,7 +751,8 @@ async def word_to_pdf(
 @router.post("/convert/excel-to-pdf", response_model=DocumentResponse)
 async def excel_to_pdf(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Convert Excel document to PDF"""
     try:
@@ -832,12 +835,13 @@ async def excel_to_pdf(
                 # Move the converted file to our output location
                 shutil.move(converted_file, temp_output.name)
                 
-                # Create document record
+                # Create document record with owner
                 doc = Document(
                     filename=f"{os.path.splitext(file.filename)[0]}_{uuid.uuid4()}.pdf",
                     original_filename=file.filename,
                     file_type="pdf",
-                    conversion_type="excel_to_pdf"
+                    conversion_type="excel_to_pdf",
+                    owner_id=current_user.id
                 )
                 db.add(doc)
                 db.commit()
@@ -893,7 +897,8 @@ async def excel_to_pdf(
 @router.post("/convert/ppt-to-pdf", response_model=DocumentResponse)
 async def ppt_to_pdf(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Convert PowerPoint document to PDF"""
     try:
@@ -976,12 +981,13 @@ async def ppt_to_pdf(
                 # Move the converted file to our output location
                 shutil.move(converted_file, temp_output.name)
                 
-                # Create document record
+                # Create document record with owner
                 doc = Document(
                     filename=f"{os.path.splitext(file.filename)[0]}_{uuid.uuid4()}.pdf",
                     original_filename=file.filename,
                     file_type="pdf",
-                    conversion_type="ppt_to_pdf"
+                    conversion_type="ppt_to_pdf",
+                    owner_id=current_user.id
                 )
                 db.add(doc)
                 db.commit()

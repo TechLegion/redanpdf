@@ -13,7 +13,7 @@
             background-color: #f8f9fa;
             padding: 1rem;
             border-radius: 0.25rem;
-            max-height: 200px;
+            max-height: 400px;
             overflow-y: auto;
         }
         .auth-section {
@@ -710,9 +710,29 @@
                 const formData = new FormData();
                 formData.append('file', document.getElementById('wordFile').files[0]);
                 const response = await callApi('/documents/convert/word-to-pdf', 'POST', formData, true);
-                document.getElementById('wordToPdfResponse').textContent = JSON.stringify(response, null, 2);
+                
+                // Show success message with download link
+                const successMessage = `
+✅ Word file converted successfully!
+
+📄 Document ID: ${response.id}
+📁 Filename: ${response.filename}
+🔗 Download URL: ${response.download_url}
+
+The converted PDF has been added to your documents. You can download it using the link above or find it in your document list.
+                `;
+                document.getElementById('wordToPdfResponse').innerHTML = `<div class="alert alert-success">${successMessage.replace(/\n/g, '<br>')}</div>`;
+                
+                // Clear the form
+                document.getElementById('wordFile').value = '';
+                
+                // Refresh document list to show the new file
+                setTimeout(() => {
+                    listDocuments();
+                }, 1000);
+                
             } catch (error) {
-                document.getElementById('wordToPdfResponse').textContent = 'Error: ' + error.message;
+                document.getElementById('wordToPdfResponse').innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
             }
         });
 
@@ -722,9 +742,29 @@
                 const formData = new FormData();
                 formData.append('file', document.getElementById('excelFile').files[0]);
                 const response = await callApi('/documents/convert/excel-to-pdf', 'POST', formData, true);
-                document.getElementById('excelToPdfResponse').textContent = JSON.stringify(response, null, 2);
+                
+                // Show success message with download link
+                const successMessage = `
+✅ Excel file converted successfully!
+
+📄 Document ID: ${response.id}
+📁 Filename: ${response.filename}
+🔗 Download URL: ${response.download_url}
+
+The converted PDF has been added to your documents. You can download it using the link above or find it in your document list.
+                `;
+                document.getElementById('excelToPdfResponse').innerHTML = `<div class="alert alert-success">${successMessage.replace(/\n/g, '<br>')}</div>`;
+                
+                // Clear the form
+                document.getElementById('excelFile').value = '';
+                
+                // Refresh document list to show the new file
+                setTimeout(() => {
+                    listDocuments();
+                }, 1000);
+                
             } catch (error) {
-                document.getElementById('excelToPdfResponse').textContent = 'Error: ' + error.message;
+                document.getElementById('excelToPdfResponse').innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
             }
         });
 
@@ -734,9 +774,29 @@
                 const formData = new FormData();
                 formData.append('file', document.getElementById('pptFile').files[0]);
                 const response = await callApi('/documents/convert/ppt-to-pdf', 'POST', formData, true);
-                document.getElementById('pptToPdfResponse').textContent = JSON.stringify(response, null, 2);
+                
+                // Show success message with download link
+                const successMessage = `
+✅ PowerPoint file converted successfully!
+
+📄 Document ID: ${response.id}
+📁 Filename: ${response.filename}
+🔗 Download URL: ${response.download_url}
+
+The converted PDF has been added to your documents. You can download it using the link above or find it in your document list.
+                `;
+                document.getElementById('pptToPdfResponse').innerHTML = `<div class="alert alert-success">${successMessage.replace(/\n/g, '<br>')}</div>`;
+                
+                // Clear the form
+                document.getElementById('pptFile').value = '';
+                
+                // Refresh document list to show the new file
+                setTimeout(() => {
+                    listDocuments();
+                }, 1000);
+                
             } catch (error) {
-                document.getElementById('pptToPdfResponse').textContent = 'Error: ' + error.message;
+                document.getElementById('pptToPdfResponse').innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
             }
         });
 
