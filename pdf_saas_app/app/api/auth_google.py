@@ -267,35 +267,3 @@ async def mobile_token_exchange(request: Request, db: Session = Depends(get_db))
     except Exception as e:
         logger.error(f"Error in mobile token exchange: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Token exchange failed: {str(e)}")
-
-@router.get('/debug')
-async def debug_google_oauth():
-    """Debug endpoint to check Google OAuth configuration"""
-    try:
-        # Check environment variables
-        env_vars = {
-            'GOOGLE_CLIENT_ID': os.getenv('GOOGLE_CLIENT_ID'),
-            'GOOGLE_CLIENT_SECRET': os.getenv('GOOGLE_CLIENT_SECRET'),
-            'GOOGLE_REDIRECT_URI': os.getenv('GOOGLE_REDIRECT_URI'),
-            'FRONTEND_URL': os.getenv('FRONTEND_URL', 'http://localhost:5500/test_interface_render.html')
-        }
-        
-        # Check if variables are set
-        missing_vars = [k for k, v in env_vars.items() if not v]
-        
-        return {
-            "status": "success" if not missing_vars else "error",
-            "environment_variables": {
-                k: "SET" if v else "MISSING" for k, v in env_vars.items()
-            },
-            "missing_variables": missing_vars,
-            "oauth_registered": bool(oauth.google),
-            "client_id_length": len(env_vars['GOOGLE_CLIENT_ID']) if env_vars['GOOGLE_CLIENT_ID'] else 0,
-            "client_secret_length": len(env_vars['GOOGLE_CLIENT_SECRET']) if env_vars['GOOGLE_CLIENT_SECRET'] else 0
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e),
-            "error_type": type(e).__name__
-        }

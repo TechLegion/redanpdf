@@ -71,13 +71,6 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/debug/db")
-def debug_db():
-    return {
-        "POSTGRES_DB": settings.POSTGRES_DB,
-        "SQLALCHEMY_DATABASE_URI": str(settings.SQLALCHEMY_DATABASE_URI)
-    }
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("pdf_saas_app.app.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -296,9 +296,6 @@ async def add_watermark(
         # Get file size
         file_size = os.path.getsize(output_path)
         
-        # Extract text content
-        text_content = pdf_processor.extract_text(output_path)
-        
         # Upload to storage
         file_path = storage_service.upload_file(output_path, output_filename)
         
@@ -308,8 +305,7 @@ async def add_watermark(
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",
-            owner_id=current_user.id,
-            text_content=text_content
+            owner_id=current_user.id
         )
         
         db.add(db_document)
@@ -373,15 +369,13 @@ async def compress_pdf(
     output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
     pdf_processor.compress_pdf(document.file_path, output_path)
     file_size = os.path.getsize(output_path)
-    text_content = pdf_processor.extract_text(output_path)
     file_path = storage_service.upload_file(output_path, output_filename)
     db_document = Document(
         filename=output_filename,
         file_path=file_path,
         file_size=file_size,
         mime_type="application/pdf",
-        owner_id=current_user.id,
-        text_content=text_content
+        owner_id=current_user.id
     )
     db.add(db_document)
     db.commit()
@@ -404,15 +398,13 @@ async def image_to_pdf(
     images[0].save(output_path, save_all=True, append_images=images[1:])
     output_filename = "images_to_pdf.pdf"
     file_size = os.path.getsize(output_path)
-    text_content = pdf_processor.extract_text(output_path)
     file_path = storage_service.upload_file(output_path, output_filename)
     db_document = Document(
         filename=output_filename,
         file_path=file_path,
         file_size=file_size,
         mime_type="application/pdf",
-        owner_id=current_user.id,
-        text_content=text_content
+        owner_id=current_user.id
     )
     db.add(db_document)
     db.commit()
@@ -595,9 +587,6 @@ async def word_to_pdf(
                     db.commit()
                     db.refresh(doc)
                     
-                    # Extract text content for the response
-                    text_content = pdf_processor.extract_text(temp_output.name)
-                    
                     # Construct the download URL with the correct API path
                     download_url = f"/documents/{doc.id}/download"
                     
@@ -605,7 +594,7 @@ async def word_to_pdf(
                         id=doc.id,
                         filename=doc.filename,
                         content_type="application/pdf",
-                        text_content=text_content,
+                        text_content=doc.get_text_content(),
                         created_at=doc.created_at,
                         download_url=download_url
                     )
@@ -671,10 +660,12 @@ async def excel_to_pdf(
                     if not soffice_path:
                         try:
                             soffice_path = subprocess.check_output(['which', 'libreoffice']).decode().strip()
-                        except:
+                        except Exception as e:
+                            logger.error(f"Error finding libreoffice: {str(e)}")
                             try:
                                 soffice_path = subprocess.check_output(['which', 'soffice']).decode().strip()
-                            except:
+                            except Exception as e:
+                                logger.error(f"Error finding soffice: {str(e)}")
                                 raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
 
                 if not soffice_path:
@@ -740,9 +731,6 @@ async def excel_to_pdf(
                     db.commit()
                     db.refresh(doc)
                     
-                    # Extract text content for the response
-                    text_content = pdf_processor.extract_text(temp_output.name)
-                    
                     # Construct the download URL with the correct API path
                     download_url = f"/documents/{doc.id}/download"
                     
@@ -750,7 +738,7 @@ async def excel_to_pdf(
                         id=doc.id,
                         filename=doc.filename,
                         content_type="application/pdf",
-                        text_content=text_content,
+                        text_content=doc.get_text_content(),
                         created_at=doc.created_at,
                         download_url=download_url
                     )
@@ -816,10 +804,12 @@ async def ppt_to_pdf(
                     if not soffice_path:
                         try:
                             soffice_path = subprocess.check_output(['which', 'libreoffice']).decode().strip()
-                        except:
+                        except Exception as e:
+                            logger.error(f"Error finding libreoffice: {str(e)}")
                             try:
                                 soffice_path = subprocess.check_output(['which', 'soffice']).decode().strip()
-                            except:
+                            except Exception as e:
+                                logger.error(f"Error finding soffice: {str(e)}")
                                 raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
 
                 if not soffice_path:
@@ -885,9 +875,6 @@ async def ppt_to_pdf(
                     db.commit()
                     db.refresh(doc)
                     
-                    # Extract text content for the response
-                    text_content = pdf_processor.extract_text(temp_output.name)
-                    
                     # Construct the download URL with the correct API path
                     download_url = f"/documents/{doc.id}/download"
                     
@@ -895,7 +882,7 @@ async def ppt_to_pdf(
                         id=doc.id,
                         filename=doc.filename,
                         content_type="application/pdf",
-                        text_content=text_content,
+                        text_content=doc.get_text_content(),
                         created_at=doc.created_at,
                         download_url=download_url
                     )
