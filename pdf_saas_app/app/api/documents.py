@@ -274,34 +274,42 @@ async def add_watermark(
     """
     Add a watermark to a PDF document
     """
+    logger.info(f"Watermark request for document {document_id} by user {current_user.id}")
+    
     # Get document
     document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
     if not document:
+        logger.warning(f"Document {document_id} not found or not owned by user {current_user.id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found"
         )
     
-    # Get file from storage
-    local_file_path = storage_service.get_file(document.file_path)
-    
-    # Create temp output file
-    output_filename = f"watermarked_{document.filename}"
-    output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
-    
     try:
+        # Get file from storage
+        local_file_path = storage_service.get_file(document.file_path)
+        logger.info(f"Retrieved local file path: {local_file_path}")
+        
+        # Create temp output file
+        output_filename = f"watermarked_{document.filename}"
+        output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
+        
         # Add watermark
+        logger.info(f"Starting watermark process for {document.filename}")
         pdf_processor.add_watermark(local_file_path, watermark_text, output_path)
         
         # Get file size
         file_size = os.path.getsize(output_path)
+        logger.info(f"Watermarked PDF size: {file_size} bytes")
         
         # Upload to storage
         file_path = storage_service.upload_file(output_path, output_filename)
+        logger.info(f"Uploaded watermarked PDF to storage: {file_path}")
         
         # Save document in database
         db_document = Document(
             filename=output_filename,
+            original_filename=output_filename,
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",
@@ -312,12 +320,21 @@ async def add_watermark(
         db.commit()
         db.refresh(db_document)
         
+        logger.info(f"Successfully created watermarked document with ID: {db_document.id}")
+        
         return db_document
-    
+        
+    except Exception as e:
+        logger.error(f"Error adding watermark to PDF {document_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to add watermark: {str(e)}"
+        )
     finally:
         # Clean up temp files
-        if os.path.exists(output_path):
+        if 'output_path' in locals() and os.path.exists(output_path):
             os.remove(output_path)
+            logger.info(f"Cleaned up temporary file: {output_path}")
 
 @router.delete("/{document_id}")
 async def delete_document(
@@ -362,27 +379,65 @@ async def compress_pdf(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """
+    Compress a PDF document
+    """
+    logger.info(f"Compress PDF request for document {document_id} by user {current_user.id}")
+    
     document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
     if not document:
+        logger.warning(f"Document {document_id} not found or not owned by user {current_user.id}")
         raise HTTPException(status_code=404, detail="Document not found")
-    output_filename = f"compressed_{document.filename}"
-    output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
-    pdf_processor.compress_pdf(document.file_path, output_path)
-    file_size = os.path.getsize(output_path)
-    file_path = storage_service.upload_file(output_path, output_filename)
-    db_document = Document(
-        filename=output_filename,
-        file_path=file_path,
-        file_size=file_size,
-        mime_type="application/pdf",
-        owner_id=current_user.id
-    )
-    db.add(db_document)
-    db.commit()
-    db.refresh(db_document)
-    if os.path.exists(output_path):
-        os.remove(output_path)
-    return db_document
+    
+    try:
+        # Get the local file path
+        local_file_path = storage_service.get_file(document.file_path)
+        logger.info(f"Retrieved local file path: {local_file_path}")
+        
+        output_filename = f"compressed_{document.filename}"
+        output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
+        
+        # Compress the PDF
+        logger.info(f"Starting PDF compression for {document.filename}")
+        pdf_processor.compress_pdf(local_file_path, output_path)
+        
+        # Get file size
+        file_size = os.path.getsize(output_path)
+        logger.info(f"Compressed PDF size: {file_size} bytes")
+        
+        # Upload to storage
+        file_path = storage_service.upload_file(output_path, output_filename)
+        logger.info(f"Uploaded compressed PDF to storage: {file_path}")
+        
+        # Create new document record
+        db_document = Document(
+            filename=output_filename,
+            original_filename=output_filename,
+            file_path=file_path,
+            file_size=file_size,
+            mime_type="application/pdf",
+            owner_id=current_user.id
+        )
+        
+        db.add(db_document)
+        db.commit()
+        db.refresh(db_document)
+        
+        logger.info(f"Successfully created compressed document with ID: {db_document.id}")
+        
+        return db_document
+        
+    except Exception as e:
+        logger.error(f"Error compressing PDF {document_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to compress PDF: {str(e)}"
+        )
+    finally:
+        # Clean up temp file
+        if 'output_path' in locals() and os.path.exists(output_path):
+            os.remove(output_path)
+            logger.info(f"Cleaned up temporary file: {output_path}")
 
 @router.post("/image-to-pdf", response_model=DocumentResponse)
 async def image_to_pdf(
