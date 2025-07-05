@@ -25,7 +25,6 @@ from pdf_saas_app.app.core.pdf_operations import PDFProcessor
 from pdf_saas_app.app.utils.cache import cache_response, invalidate_cache, CacheManager
 
 router = APIRouter()
-storage_service = StorageService()
 pdf_processor = PDFProcessor()
 logger = logging.getLogger(__name__)
 
@@ -97,6 +96,7 @@ async def upload_document(
         file_size = os.path.getsize(temp_file.name)
         
         # Upload to storage
+        storage_service = StorageService()
         file_path = storage_service.upload_file(temp_file.name, file.filename)
         
         # Save document in database
@@ -212,6 +212,7 @@ async def download_document(
         document.last_accessed = func.now()
         db.commit()
         # Get the file from storage and return it
+        storage_service = StorageService()
         local_file_path = storage_service.get_file(document.file_path)
         return FileResponse(
             local_file_path,
@@ -251,6 +252,7 @@ async def merge_documents(
         
         try:
             # Get file from storage
+            storage_service = StorageService()
             local_file_path = storage_service.get_file(document.file_path)
             pdf_paths.append(local_file_path)
         except FileNotFoundError as e:
@@ -275,6 +277,7 @@ async def merge_documents(
         file_size = os.path.getsize(output_path)
         
         # Upload merged file to storage
+        storage_service = StorageService()
         file_path = storage_service.upload_file(output_path, output_filename)
         
         # Save document in database
@@ -328,6 +331,7 @@ async def add_watermark(
     
     try:
         # Get file from storage
+        storage_service = StorageService()
         local_file_path = storage_service.get_file(document.file_path)
         logger.info(f"Retrieved local file path: {local_file_path}")
         
@@ -344,6 +348,7 @@ async def add_watermark(
         logger.info(f"Watermarked PDF size: {file_size} bytes")
         
         # Upload to storage
+        storage_service = StorageService()
         file_path = storage_service.upload_file(output_path, output_filename)
         logger.info(f"Uploaded watermarked PDF to storage: {file_path}")
         
@@ -412,6 +417,7 @@ async def delete_document(
         )
     
     # Delete from storage
+    storage_service = StorageService()
     storage_service.delete_file(document.file_path)
     
     # Delete from database
@@ -431,6 +437,7 @@ async def extract_text_from_pdf(
         raise HTTPException(status_code=404, detail="Document not found")
     
     try:
+        storage_service = StorageService()
         local_file_path = storage_service.get_file(document.file_path)
         text = pdf_processor.extract_text(local_file_path)
         return {"text": text}
@@ -464,6 +471,7 @@ async def compress_pdf(
     
     try:
         # Get the local file path
+        storage_service = StorageService()
         local_file_path = storage_service.get_file(document.file_path)
         logger.info(f"Retrieved local file path: {local_file_path}")
         logger.info(f"File path type: {type(local_file_path)}")
@@ -484,6 +492,7 @@ async def compress_pdf(
         logger.info(f"Compressed PDF size: {file_size} bytes")
         
         # Upload to storage
+        storage_service = StorageService()
         file_path = storage_service.upload_file(output_path, output_filename)
         logger.info(f"Uploaded compressed PDF to storage: {file_path}")
         
@@ -548,6 +557,7 @@ async def image_to_pdf(
     images[0].save(output_path, save_all=True, append_images=images[1:])
     output_filename = "images_to_pdf.pdf"
     file_size = os.path.getsize(output_path)
+    storage_service = StorageService()
     file_path = storage_service.upload_file(output_path, output_filename)
     db_document = Document(
         filename=output_filename,
@@ -577,6 +587,7 @@ async def pdf_to_epub(
         raise HTTPException(status_code=404, detail="Document not found")
     
     try:
+        storage_service = StorageService()
         local_file_path = storage_service.get_file(document.file_path)
         output_filename = document.filename.rsplit(".", 1)[0] + ".epub"
         output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.epub').name
@@ -584,10 +595,11 @@ async def pdf_to_epub(
         pdf_processor.pdf_to_epub(local_file_path, output_path)
         
         # Create a new document record for the EPUB
+        file_path = storage_service.upload_file(output_path, output_filename)
         epub_doc = Document(
             filename=output_filename,
             original_filename=output_filename,
-            file_path=storage_service.upload_file(output_path, output_filename),
+            file_path=file_path,
             file_size=os.path.getsize(output_path),
             mime_type="application/epub+zip",
             file_type="epub",
@@ -631,6 +643,7 @@ async def pdf_to_jpg(
         raise HTTPException(status_code=404, detail="Document not found")
     
     try:
+        storage_service = StorageService()
         local_file_path = storage_service.get_file(document.file_path)
         output_dir = tempfile.mkdtemp()
         try:
@@ -709,17 +722,54 @@ async def word_to_pdf(
             
             # Create a temporary file for the output
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
-                # Convert using Calibre
+                # Get LibreOffice path using the same logic as pdf_operations.py
+                if os.name == 'nt':  # Windows
+                    libreoffice_paths = [
+                        r"C:\Program Files\LibreOffice\program\soffice.exe",
+                        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                        os.path.expanduser("~\\AppData\\Local\\Programs\\LibreOffice\\program\\soffice.exe")
+                    ]
+                    soffice_path = None
+                    for path in libreoffice_paths:
+                        if os.path.exists(path):
+                            soffice_path = path
+                            break
+                else:  # Linux/Mac
+                    linux_paths = [
+                        "/usr/bin/libreoffice",
+                        "/usr/bin/soffice",
+                        "/usr/lib/libreoffice/program/soffice",
+                        "/opt/libreoffice/program/soffice",
+                        "/snap/bin/libreoffice",
+                        "/usr/local/bin/libreoffice",
+                        "/usr/local/bin/soffice"
+                    ]
+                    soffice_path = None
+                    for path in linux_paths:
+                        if os.path.exists(path):
+                            soffice_path = path
+                            break
+                    if not soffice_path:
+                        try:
+                            soffice_path = subprocess.check_output(['which', 'libreoffice']).decode().strip()
+                        except Exception as e:
+                            logger.error(f"Error finding libreoffice: {str(e)}")
+                            try:
+                                soffice_path = subprocess.check_output(['which', 'soffice']).decode().strip()
+                            except Exception as e:
+                                logger.error(f"Error finding soffice: {str(e)}")
+                                raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
+
+                if not soffice_path:
+                    raise FileNotFoundError("LibreOffice not found. Please install LibreOffice to use this feature.")
+
+                # Convert using LibreOffice
                 result = subprocess.run([
-                    'ebook-convert',
-                    temp_input.name,
-                    temp_output.name,
-                    '--pdf-page-numbers',
-                    '--paper-size', 'a4',
-                    '--margin-left', '72',
-                    '--margin-right', '72',
-                    '--margin-top', '72',
-                    '--margin-bottom', '72'
+                    soffice_path,
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', os.path.dirname(temp_output.name),
+                    temp_input.name
                 ], capture_output=True, text=True)
                 
                 if result.returncode != 0:
@@ -727,6 +777,21 @@ async def word_to_pdf(
                         status_code=500,
                         detail=f"Conversion failed: {result.stderr}"
                     )
+                
+                # Get the converted file path
+                converted_file = os.path.join(
+                    os.path.dirname(temp_output.name),
+                    os.path.splitext(os.path.basename(temp_input.name))[0] + '.pdf'
+                )
+                
+                if not os.path.exists(converted_file):
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Converted file not found"
+                    )
+                
+                # Move the converted file to our output location
+                shutil.move(converted_file, temp_output.name)
                 
                 # Create document record with owner
                 doc = Document(
@@ -741,9 +806,6 @@ async def word_to_pdf(
                 db.refresh(doc)
                 
                 try:
-                    # Upload to storage - ensure consistent forward slashes from the start
-                    storage_path = os.path.join("documents", str(doc.id), doc.filename).replace("\\", "/")
-                    
                     # Verify the temp file exists and has content
                     if not os.path.exists(temp_output.name):
                         raise HTTPException(status_code=500, detail="Temporary output file was not created")
@@ -751,13 +813,16 @@ async def word_to_pdf(
                     if os.path.getsize(temp_output.name) == 0:
                         raise HTTPException(status_code=500, detail="Temporary output file is empty")
                     
-                    # Upload the file
-                    storage_service.upload_file(temp_output.name, storage_path)
+                    # Upload the file using the filename only - storage service will handle the path
+                    storage_service = StorageService()
+                    file_path = storage_service.upload_file(temp_output.name, doc.filename)
+                    print(f"Word to PDF conversion - storage service returned: {file_path}")
                     
                     # Update document with storage path
-                    doc.file_path = storage_path
+                    doc.file_path = file_path
                     db.commit()
                     db.refresh(doc)
+                    print(f"Word to PDF conversion - saved to database with file_path: {doc.file_path}")
                     
                     # Construct the download URL with the correct API path
                     download_url = f"/documents/{doc.id}/download"
@@ -887,9 +952,6 @@ async def excel_to_pdf(
                 db.refresh(doc)
                 
                 try:
-                    # Upload to storage - ensure consistent forward slashes from the start
-                    storage_path = os.path.join("documents", str(doc.id), doc.filename).replace("\\", "/")
-                    
                     # Verify the temp file exists and has content
                     if not os.path.exists(temp_output.name):
                         raise HTTPException(status_code=500, detail="Temporary output file was not created")
@@ -897,11 +959,12 @@ async def excel_to_pdf(
                     if os.path.getsize(temp_output.name) == 0:
                         raise HTTPException(status_code=500, detail="Temporary output file is empty")
                     
-                    # Upload the file
-                    storage_service.upload_file(temp_output.name, storage_path)
+                    # Upload the file using the filename only - storage service will handle the path
+                    storage_service = StorageService()
+                    file_path = storage_service.upload_file(temp_output.name, doc.filename)
                     
                     # Update document with storage path
-                    doc.file_path = storage_path
+                    doc.file_path = file_path
                     db.commit()
                     db.refresh(doc)
                     
@@ -1033,9 +1096,6 @@ async def ppt_to_pdf(
                 db.refresh(doc)
                 
                 try:
-                    # Upload to storage - ensure consistent forward slashes from the start
-                    storage_path = os.path.join("documents", str(doc.id), doc.filename).replace("\\", "/")
-                    
                     # Verify the temp file exists and has content
                     if not os.path.exists(temp_output.name):
                         raise HTTPException(status_code=500, detail="Temporary output file was not created")
@@ -1043,11 +1103,12 @@ async def ppt_to_pdf(
                     if os.path.getsize(temp_output.name) == 0:
                         raise HTTPException(status_code=500, detail="Temporary output file is empty")
                     
-                    # Upload the file
-                    storage_service.upload_file(temp_output.name, storage_path)
+                    # Upload the file using the filename only - storage service will handle the path
+                    storage_service = StorageService()
+                    file_path = storage_service.upload_file(temp_output.name, doc.filename)
                     
                     # Update document with storage path
-                    doc.file_path = storage_path
+                    doc.file_path = file_path
                     db.commit()
                     db.refresh(doc)
                     
@@ -1100,6 +1161,7 @@ async def get_document_preview(
     
     try:
         # Get the file from storage
+        storage_service = StorageService()
         local_file_path = storage_service.get_file(document.file_path)
         
         # Open the PDF

@@ -39,6 +39,10 @@ class StorageService:
         """
         unique_filename = self._get_unique_filename(original_filename)
         
+        print(f"Storage service - storage_type: {self.storage_type}")
+        print(f"Storage service - bucket_name: {self.bucket_name}")
+        print(f"Storage service - uploading file: {file_path} as {unique_filename}")
+        
         if self.storage_type == "s3":
             # Upload to S3
             with open(file_path, "rb") as file_data:
@@ -47,7 +51,9 @@ class StorageService:
                     self.bucket_name, 
                     unique_filename
                 )
-            return f"https://{self.bucket_name}.s3.amazonaws.com/{unique_filename}"
+            s3_url = f"https://{self.bucket_name}.s3.amazonaws.com/{unique_filename}"
+            print(f"Storage service - returning S3 URL: {s3_url}")
+            return s3_url
         
         elif self.storage_type == "azure":
             # Upload to Azure Blob Storage

@@ -371,6 +371,10 @@
                                 <label for="mergeDocumentIds" class="form-label">Document IDs (comma-separated)</label>
                                 <input type="text" class="form-control" id="mergeDocumentIds" required>
                             </div>
+                            <div class="mb-3">
+                                <label for="mergeOutputFilename" class="form-label">Output Filename</label>
+                                <input type="text" class="form-control" id="mergeOutputFilename">
+                            </div>
                             <button type="submit" class="btn btn-primary">Merge PDFs</button>
                         </form>
                         <div class="response-area mt-3" id="mergePdfResponse"></div>
@@ -627,15 +631,6 @@
 
                 // Handle JSON responses
                 const responseData = await response.json();
-                if (responseData.download_url) {
-                    // Create a download link for the file
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = `${API_BASE_URL}${responseData.download_url}`;
-                    downloadLink.download = responseData.filename || `converted_${Date.now()}`;
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                }
                 return responseData;
             } catch (error) {
                 console.error('API Error:', error);
@@ -1026,8 +1021,22 @@
         if (mergePdfForm) {
             mergePdfForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const documentIds = document.getElementById('mergeDocumentIds').value.split(',').map(id => id.trim());
-                const outputFilename = document.getElementById('mergeOutputFilename').value || 'merged.pdf';
+                
+                const mergeDocumentIdsElement = document.getElementById('mergeDocumentIds');
+                const mergeOutputFilenameElement = document.getElementById('mergeOutputFilename');
+                
+                if (!mergeDocumentIdsElement) {
+                    setError('mergePdfResponse', new Error('Merge document IDs field not found'));
+                    return;
+                }
+                
+                const documentIds = mergeDocumentIdsElement.value.split(',').map(id => id.trim());
+                const outputFilename = mergeOutputFilenameElement ? mergeOutputFilenameElement.value || 'merged.pdf' : 'merged.pdf';
+                
+                if (!documentIds || documentIds.length === 0 || (documentIds.length === 1 && documentIds[0] === '')) {
+                    setError('mergePdfResponse', new Error('Please enter at least one document ID'));
+                    return;
+                }
                 
                 const formData = new FormData();
                 documentIds.forEach(id => formData.append('document_ids', id));
@@ -1048,8 +1057,32 @@
         if (watermarkPdfForm) {
             watermarkPdfForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const documentId = document.getElementById('watermarkDocumentId').value;
-                const watermarkText = document.getElementById('watermarkText').value;
+                
+                const watermarkDocumentIdElement = document.getElementById('watermarkDocumentId');
+                const watermarkTextElement = document.getElementById('watermarkText');
+                
+                if (!watermarkDocumentIdElement) {
+                    setError('watermarkPdfResponse', new Error('Watermark document ID field not found'));
+                    return;
+                }
+                
+                if (!watermarkTextElement) {
+                    setError('watermarkPdfResponse', new Error('Watermark text field not found'));
+                    return;
+                }
+                
+                const documentId = watermarkDocumentIdElement.value;
+                const watermarkText = watermarkTextElement.value;
+                
+                if (!documentId) {
+                    setError('watermarkPdfResponse', new Error('Please enter a document ID'));
+                    return;
+                }
+                
+                if (!watermarkText) {
+                    setError('watermarkPdfResponse', new Error('Please enter watermark text'));
+                    return;
+                }
                 
                 const formData = new FormData();
                 formData.append('watermark_text', watermarkText);
@@ -1069,7 +1102,20 @@
         if (extractTextForm) {
             extractTextForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const documentId = document.getElementById('extractTextDocumentId').value;
+                
+                const extractTextDocumentIdElement = document.getElementById('extractTextDocumentId');
+                
+                if (!extractTextDocumentIdElement) {
+                    setError('extractTextResponse', new Error('Extract text document ID field not found'));
+                    return;
+                }
+                
+                const documentId = extractTextDocumentIdElement.value;
+                
+                if (!documentId) {
+                    setError('extractTextResponse', new Error('Please enter a document ID'));
+                    return;
+                }
                 
                 try {
                     const result = await callApi(`/documents/${documentId}/extract-text`, null, 'GET');
@@ -1085,19 +1131,24 @@
         if (epubForm) {
             epubForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const documentId = document.getElementById('epubDocumentId').value;
+                
+                const epubDocumentIdElement = document.getElementById('epubDocumentId');
+                
+                if (!epubDocumentIdElement) {
+                    setError('epubResponse', new Error('EPUB document ID field not found'));
+                    return;
+                }
+                
+                const documentId = epubDocumentIdElement.value;
+                
+                if (!documentId) {
+                    setError('epubResponse', new Error('Please enter a document ID'));
+                    return;
+                }
                 
                 try {
                     const result = await callApi(`/documents/${documentId}/to-epub`, null, 'POST');
                     setResponse('epubResponse', 'Converted to EPUB successfully', result);
-                    // Show only a download button for EPUB
-                    if (result && result.download_url && result.filename) {
-                        document.getElementById('epubResponse').innerHTML += `
-                            <div class="mt-3">
-                                <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download EPUB</button>
-                            </div>
-                        `;
-                    }
                 } catch (error) {
                     setError('epubResponse', error);
                 }
@@ -1127,7 +1178,6 @@
                             <div class="alert alert-success">Conversion successful!</div>
                             <div class="mt-3">
                                 <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download PDF</button>
-                                <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
                             </div>
                         `;
                     }
@@ -1160,7 +1210,6 @@
                             <div class="alert alert-success">Conversion successful!</div>
                             <div class="mt-3">
                                 <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download PDF</button>
-                                <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
                             </div>
                         `;
                     }
@@ -1193,7 +1242,6 @@
                             <div class="alert alert-success">Conversion successful!</div>
                             <div class="mt-3">
                                 <button class="btn btn-primary" onclick="downloadDocumentFromUrl('${result.download_url}', '${result.filename}')">Download PDF</button>
-                                <iframe src="${API_BASE_URL}${result.download_url}" class="mt-3"></iframe>
                             </div>
                         `;
                     }
@@ -1342,11 +1390,28 @@
 
         function downloadDocumentFromUrl(downloadUrl, filename) {
             const token = getToken();
+            console.log('downloadDocumentFromUrl called with:', downloadUrl, filename);
+            console.log('Token available:', !!token);
+            console.log('Token length:', token ? token.length : 0);
+            
+            if (!token) {
+                alert('No authentication token found. Please log in.');
+                return;
+            }
+            
             fetch(`${API_BASE_URL}${downloadUrl}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             .then(response => {
-                if (!response.ok) throw new Error('Failed to download file');
+                console.log('Download response status:', response.status);
+                console.log('Download response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    return response.text().then(errorText => {
+                        console.error('Download error response:', errorText);
+                        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+                    });
+                }
                 return response.blob();
             })
             .then(blob => {
@@ -1360,6 +1425,7 @@
                 document.body.removeChild(a);
             })
             .catch(err => {
+                console.error('Download error:', err);
                 alert('Download failed: ' + err.message);
             });
         }
