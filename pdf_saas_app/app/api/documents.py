@@ -124,7 +124,7 @@ async def upload_document(
             content_type="application/pdf",
             text_content=text_content,
             created_at=db_document.created_at,
-            download_url=f"/api/v1/documents/{db_document.id}/download"
+            download_url=f"/documents/{db_document.id}/download"
         )
     
     finally:
@@ -600,7 +600,7 @@ async def pdf_to_epub(
         
         return {
             "document_id": epub_doc.id,
-            "download_url": f"/api/v1/documents/{epub_doc.id}/download",
+            "download_url": f"/documents/{epub_doc.id}/download",
             "filename": output_filename
         }
     except FileNotFoundError as e:
