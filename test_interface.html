@@ -535,16 +535,16 @@
                 'Authorization': `Bearer ${token}`
             };
 
-            if (!isFormData && data) {
-                headers['Content-Type'] = 'application/json';
-            }
-
             const options = {
                 method,
                 headers
             };
 
-            if (data) {
+            // Only add body for non-GET requests
+            if (data && method !== 'GET') {
+                if (!isFormData) {
+                    headers['Content-Type'] = 'application/json';
+                }
                 options.body = isFormData ? data : JSON.stringify(data);
             }
 
@@ -750,6 +750,7 @@ The converted PDF has been added to your documents. You can download it using th
 📄 Document ID: ${response.id}
 📁 Filename: ${response.filename}
 🔗 Download URL: ${response.download_url}
+💬 Message: ${response.message}
 
 The converted PDF has been added to your documents. You can download it using the link above or find it in your document list.
                 `;
@@ -809,9 +810,30 @@ The converted PDF has been added to your documents. You can download it using th
                 documentIds.forEach(id => formData.append('document_ids', id));
                 formData.append('output_filename', document.getElementById('mergeOutputFilename').value);
                 const response = await callApi('/documents/merge', 'POST', formData, true);
-                document.getElementById('mergeResponse').textContent = JSON.stringify(response, null, 2);
+                
+                // Show success message with download link
+                const successMessage = `
+✅ Documents merged successfully!
+
+📄 Document ID: ${response.id}
+📁 Filename: ${response.filename}
+🔗 Download URL: ${response.download_url}
+💬 Message: ${response.message}
+
+The merged PDF has been added to your documents. You can download it using the link above or find it in your document list.
+                `;
+                document.getElementById('mergeResponse').innerHTML = `<div class="alert alert-success">${successMessage.replace(/\n/g, '<br>')}</div>`;
+                
+                // Clear the form
+                document.getElementById('mergeDocumentIds').value = '';
+                document.getElementById('mergeOutputFilename').value = '';
+                
+                // Refresh document list to show the new file
+                setTimeout(() => {
+                    listDocuments();
+                }, 1000);
             } catch (error) {
-                document.getElementById('mergeResponse').textContent = 'Error: ' + error.message;
+                document.getElementById('mergeResponse').innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
             }
         });
 
@@ -821,9 +843,30 @@ The converted PDF has been added to your documents. You can download it using th
                 const formData = new FormData();
                 formData.append('watermark_text', document.getElementById('watermarkText').value);
                 const response = await callApi(`/documents/${document.getElementById('watermarkDocumentId').value}/watermark`, 'POST', formData, true);
-                document.getElementById('watermarkResponse').textContent = JSON.stringify(response, null, 2);
+                
+                // Show success message with download link
+                const successMessage = `
+✅ Watermark added successfully!
+
+📄 Document ID: ${response.id}
+📁 Filename: ${response.filename}
+🔗 Download URL: ${response.download_url}
+💬 Message: ${response.message}
+
+The watermarked PDF has been added to your documents. You can download it using the link above or find it in your document list.
+                `;
+                document.getElementById('watermarkResponse').innerHTML = `<div class="alert alert-success">${successMessage.replace(/\n/g, '<br>')}</div>`;
+                
+                // Clear the form
+                document.getElementById('watermarkText').value = '';
+                document.getElementById('watermarkDocumentId').value = '';
+                
+                // Refresh document list to show the new file
+                setTimeout(() => {
+                    listDocuments();
+                }, 1000);
             } catch (error) {
-                document.getElementById('watermarkResponse').textContent = 'Error: ' + error.message;
+                document.getElementById('watermarkResponse').innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
             }
         });
 
@@ -835,10 +878,29 @@ The converted PDF has been added to your documents. You can download it using th
                 console.log('Attempting to compress document:', documentId); // Debug log
                 const response = await callApi(`/documents/${documentId}/compress`, 'POST');
                 console.log('Compress response:', response); // Debug log
-                document.getElementById('compressPdfResponse').textContent = JSON.stringify(response, null, 2);
+                // Show success message with download link
+                const successMessage = `
+✅ PDF compressed successfully!
+
+📄 Document ID: ${response.id}
+📁 Filename: ${response.filename}
+🔗 Download URL: ${response.download_url}
+💬 Message: ${response.message}
+
+The compressed PDF has been added to your documents. You can download it using the link above or find it in your document list.
+                `;
+                document.getElementById('compressPdfResponse').innerHTML = `<div class="alert alert-success">${successMessage.replace(/\n/g, '<br>')}</div>`;
+                
+                // Clear the form
+                document.getElementById('compressDocumentId').value = '';
+                
+                // Refresh document list to show the new file
+                setTimeout(() => {
+                    listDocuments();
+                }, 1000);
             } catch (error) {
                 console.error('Compress error:', error); // Debug log
-                document.getElementById('compressPdfResponse').textContent = 'Error: ' + error.message;
+                document.getElementById('compressPdfResponse').innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
             }
         });
 

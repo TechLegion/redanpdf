@@ -585,17 +585,17 @@
                     'Authorization': `Bearer ${token}`
                 };
 
-                if (!isFormData) {
-                    headers['Content-Type'] = 'application/json';
-                }
-
                 const options = {
                     method: method,
                     headers: headers,
                     mode: 'cors'  // Enable CORS
                 };
 
-                if (data) {
+                // Only add body for non-GET requests
+                if (data && method !== 'GET') {
+                    if (!isFormData) {
+                        headers['Content-Type'] = 'application/json';
+                    }
                     options.body = isFormData ? data : JSON.stringify(data);
                 }
 
@@ -1352,9 +1352,20 @@
             try {
                 const documentId = document.getElementById('compressDocumentId').value;
                 console.log('Attempting to compress document:', documentId); // Debug log
-                const response = await callApi(`/documents/${documentId}/compress`, 'POST');
+                const response = await callApi(`/documents/${documentId}/compress`, null, 'POST');
                 console.log('Compress response:', response); // Debug log
-                document.getElementById('compressPdfResponse').textContent = JSON.stringify(response, null, 2);
+                // Show success message with download link
+                const successMessage = `
+✅ PDF compressed successfully!
+
+📄 Document ID: ${response.id}
+📁 Filename: ${response.filename}
+🔗 Download URL: ${response.download_url}
+💬 Message: ${response.message}
+
+The compressed PDF has been added to your documents. You can download it using the link above or find it in your document list.
+                `;
+                document.getElementById('compressPdfResponse').innerHTML = `<div class="alert alert-success">${successMessage.replace(/\n/g, '<br>')}</div>`;
             } catch (error) {
                 console.error('Compress error:', error); // Debug log
                 document.getElementById('compressPdfResponse').textContent = 'Error: ' + error.message;

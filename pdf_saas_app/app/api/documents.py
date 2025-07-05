@@ -39,6 +39,17 @@ class DocumentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class DocumentOperationResponse(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    created_at: datetime
+    download_url: str
+    message: str = "Operation completed successfully"
+
+    class Config:
+        from_attributes = True
+
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
     file: UploadFile = File(...),
@@ -214,7 +225,7 @@ async def download_document(
             detail="The file is no longer available. The document record has been cleaned up. Please upload the file again."
         )
 
-@router.post("/merge")
+@router.post("/merge", response_model=DocumentOperationResponse)
 async def merge_documents(
     document_ids: List[str] = Form(...),
     output_filename: str = Form("merged.pdf"),
@@ -276,18 +287,21 @@ async def merge_documents(
         db.commit()
         db.refresh(db_document)
         
-        return {
-            "id": db_document.id,
-            "filename": db_document.filename,
-            "message": "Documents merged successfully"
-        }
+        return DocumentOperationResponse(
+            id=db_document.id,
+            filename=db_document.filename,
+            content_type="application/pdf",
+            created_at=db_document.created_at,
+            download_url=f"/documents/{db_document.id}/download",
+            message="Documents merged successfully"
+        )
     
     finally:
         # Clean up temp files
         if os.path.exists(output_path):
             os.remove(output_path)
 
-@router.post("/{document_id}/watermark", response_model=DocumentResponse)
+@router.post("/{document_id}/watermark", response_model=DocumentOperationResponse)
 async def add_watermark(
     document_id: str,
     watermark_text: str = Form(...),
@@ -345,7 +359,14 @@ async def add_watermark(
         
         logger.info(f"Successfully created watermarked document with ID: {db_document.id}")
         
-        return db_document
+        return DocumentOperationResponse(
+            id=db_document.id,
+            filename=db_document.filename,
+            content_type="application/pdf",
+            created_at=db_document.created_at,
+            download_url=f"/documents/{db_document.id}/download",
+            message="Watermark added successfully"
+        )
         
     except FileNotFoundError as e:
         logger.error(f"File not found for document {document_id}: {str(e)}")
@@ -419,7 +440,7 @@ async def extract_text_from_pdf(
             detail="The file is no longer available. The document record has been cleaned up. Please upload the file again."
         )
 
-@router.post("/{document_id}/compress", response_model=DocumentResponse)
+@router.post("/{document_id}/compress", response_model=DocumentOperationResponse)
 async def compress_pdf(
     document_id: str,
     db: Session = Depends(get_db),
@@ -471,7 +492,14 @@ async def compress_pdf(
         
         logger.info(f"Successfully created compressed document with ID: {db_document.id}")
         
-        return db_document
+        return DocumentOperationResponse(
+            id=db_document.id,
+            filename=db_document.filename,
+            content_type="application/pdf",
+            created_at=db_document.created_at,
+            download_url=f"/documents/{db_document.id}/download",
+            message="PDF compressed successfully"
+        )
         
     except FileNotFoundError as e:
         logger.error(f"File not found for document {document_id}: {str(e)}")
@@ -654,7 +682,7 @@ async def pdf_to_jpg(
             detail=f"Failed to convert PDF to JPG: {str(e)}"
         )
 
-@router.post("/convert/word-to-pdf", response_model=DocumentResponse)
+@router.post("/convert/word-to-pdf", response_model=DocumentOperationResponse)
 async def word_to_pdf(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -723,13 +751,13 @@ async def word_to_pdf(
                     # Construct the download URL with the correct API path
                     download_url = f"/documents/{doc.id}/download"
                     
-                    return DocumentResponse(
+                    return DocumentOperationResponse(
                         id=doc.id,
                         filename=doc.filename,
                         content_type="application/pdf",
-                        text_content=doc.get_text_content(),
                         created_at=doc.created_at,
-                        download_url=download_url
+                        download_url=download_url,
+                        message="Word document converted successfully"
                     )
                 except Exception as e:
                     # If storage upload fails, delete the document record
@@ -748,7 +776,7 @@ async def word_to_pdf(
         if 'temp_output' in locals():
             os.unlink(temp_output.name)
 
-@router.post("/convert/excel-to-pdf", response_model=DocumentResponse)
+@router.post("/convert/excel-to-pdf", response_model=DocumentOperationResponse)
 async def excel_to_pdf(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -869,13 +897,13 @@ async def excel_to_pdf(
                     # Construct the download URL with the correct API path
                     download_url = f"/documents/{doc.id}/download"
                     
-                    return DocumentResponse(
+                    return DocumentOperationResponse(
                         id=doc.id,
                         filename=doc.filename,
                         content_type="application/pdf",
-                        text_content=doc.get_text_content(),
                         created_at=doc.created_at,
-                        download_url=download_url
+                        download_url=download_url,
+                        message="Excel document converted successfully"
                     )
                 except Exception as e:
                     # If storage upload fails, delete the document record
@@ -894,7 +922,7 @@ async def excel_to_pdf(
         if 'temp_output' in locals():
             os.unlink(temp_output.name)
 
-@router.post("/convert/ppt-to-pdf", response_model=DocumentResponse)
+@router.post("/convert/ppt-to-pdf", response_model=DocumentOperationResponse)
 async def ppt_to_pdf(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -1015,13 +1043,13 @@ async def ppt_to_pdf(
                     # Construct the download URL with the correct API path
                     download_url = f"/documents/{doc.id}/download"
                     
-                    return DocumentResponse(
+                    return DocumentOperationResponse(
                         id=doc.id,
                         filename=doc.filename,
                         content_type="application/pdf",
-                        text_content=doc.get_text_content(),
                         created_at=doc.created_at,
-                        download_url=download_url
+                        download_url=download_url,
+                        message="PowerPoint document converted successfully"
                     )
                 except Exception as e:
                     # If storage upload fails, delete the document record
