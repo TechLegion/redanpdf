@@ -22,6 +22,7 @@ from pdf_saas_app.app.db.models import User, Document
 from pdf_saas_app.app.services.auth_services import get_current_active_user
 from pdf_saas_app.app.services.storage_service import StorageService
 from pdf_saas_app.app.core.pdf_operations import PDFProcessor
+from pdf_saas_app.app.utils.cache import cache_response, invalidate_cache, CacheManager
 
 router = APIRouter()
 storage_service = StorageService()
@@ -51,6 +52,7 @@ class DocumentOperationResponse(BaseModel):
         from_attributes = True
 
 @router.post("/upload", response_model=DocumentResponse)
+@invalidate_cache("doc_list:*")  # Invalidate document list cache
 async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -131,6 +133,7 @@ async def upload_document(
             os.remove(temp_file.name)
 
 @router.get("/list", response_model=List[DocumentResponse])
+@cache_response(ttl=300, key_prefix="doc_list")  # Cache for 5 minutes
 async def list_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -155,6 +158,7 @@ async def list_documents(
     return response_documents
 
 @router.get("/{document_id}", response_model=DocumentResponse)
+@cache_response(ttl=600, key_prefix="doc_detail")  # Cache for 10 minutes
 async def get_document(
     document_id: str,
     db: Session = Depends(get_db),
@@ -391,6 +395,7 @@ async def add_watermark(
             logger.info(f"Cleaned up temporary file: {output_path}")
 
 @router.delete("/{document_id}")
+@invalidate_cache("doc_list:*")  # Invalidate document list cache
 async def delete_document(
     document_id: str,
     db: Session = Depends(get_db),
@@ -441,6 +446,7 @@ async def extract_text_from_pdf(
         )
 
 @router.post("/{document_id}/compress", response_model=DocumentOperationResponse)
+@invalidate_cache("doc_list:*")  # Invalidate document list cache
 async def compress_pdf(
     document_id: str,
     db: Session = Depends(get_db),
@@ -460,12 +466,17 @@ async def compress_pdf(
         # Get the local file path
         local_file_path = storage_service.get_file(document.file_path)
         logger.info(f"Retrieved local file path: {local_file_path}")
+        logger.info(f"File path type: {type(local_file_path)}")
+        logger.info(f"File exists: {os.path.exists(local_file_path)}")
+        logger.info(f"File size: {os.path.getsize(local_file_path) if os.path.exists(local_file_path) else 'N/A'}")
         
         output_filename = f"compressed_{document.filename}"
         output_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
         
         # Compress the PDF
         logger.info(f"Starting PDF compression for {document.filename}")
+        logger.info(f"Input file path: {local_file_path}")
+        logger.info(f"Output file path: {output_path}")
         pdf_processor.compress_pdf(local_file_path, output_path)
         
         # Get file size

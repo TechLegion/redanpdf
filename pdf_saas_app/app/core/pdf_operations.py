@@ -79,33 +79,88 @@ class PDFProcessor:
         Compress a PDF file (lower quality = higher compression)
         """
         try:
-            # Convert PDF to images
-            images = convert_from_path(file_path, dpi=72)
+            logger.info(f"PDFProcessor.compress_pdf called with file_path: {file_path}")
+            logger.info(f"file_path type: {type(file_path)}")
+            logger.info(f"file_path exists: {os.path.exists(file_path)}")
             
-            # Create a new PDF from compressed images
-            output_pdf = PdfWriter()
-            
-            for img in images:
-                img_byte_array = io.BytesIO()
-                img.save(img_byte_array, format='JPEG', quality=quality)
-                img_byte_array.seek(0)
+            # Alternative compression method using PyMuPDF (fitz)
+            try:
+                logger.info("Attempting compression using PyMuPDF")
+                with fitz.open(file_path) as doc:
+                    # Create a new document
+                    new_doc = fitz.open()
+                    
+                    for page_num in range(len(doc)):
+                        page = doc.load_page(page_num)
+                        
+                        # Get the page as an image with reduced quality
+                        mat = fitz.Matrix(1.0, 1.0)  # Scale factor
+                        pix = page.get_pixmap(matrix=mat, alpha=False)
+                        
+                        # Convert to PIL Image for compression
+                        img_data = pix.tobytes("png")
+                        img = Image.open(io.BytesIO(img_data))
+                        
+                        # Compress the image
+                        img_byte_array = io.BytesIO()
+                        img.save(img_byte_array, format='JPEG', quality=quality, optimize=True)
+                        img_byte_array.seek(0)
+                        
+                        # Create a new page with the compressed image
+                        new_page = new_doc.new_page(width=page.rect.width, height=page.rect.height)
+                        new_page.insert_image(page.rect, stream=img_byte_array.getvalue())
+                    
+                    # Save the compressed PDF
+                    new_doc.save(output_path, garbage=4, deflate=True)
+                    new_doc.close()
                 
-                # Create temporary PDF from image
-                temp_pdf_path = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False).name
-                c = canvas.Canvas(temp_pdf_path, pagesize=letter)
-                c.drawImage(img_byte_array, 0, 0, width=letter[0], height=letter[1])
-                c.save()
+                logger.info(f"Successfully compressed PDF using PyMuPDF")
+                return output_path
                 
-                # Add page to output PDF
-                reader = PdfReader(temp_pdf_path)
-                output_pdf.add_page(reader.pages[0])
-                os.unlink(temp_pdf_path)
-            
-            # Save the compressed PDF
-            with open(output_path, "wb") as output_file:
-                output_pdf.write(output_file)
-            
-            return output_path
+            except Exception as e:
+                logger.error(f"PyMuPDF compression failed: {str(e)}")
+                logger.info("Falling back to pdf2image method")
+                
+                # Fallback to original method
+                # Convert PDF to images
+                logger.info(f"Calling convert_from_path with: {file_path}")
+                try:
+                    images = convert_from_path(file_path, dpi=72)
+                except Exception as e2:
+                    logger.error(f"Error in convert_from_path: {str(e2)}")
+                    logger.error(f"Error type: {type(e2)}")
+                    # Try with explicit poppler path
+                    try:
+                        images = convert_from_path(file_path, dpi=72, poppler_path=None)
+                    except Exception as e3:
+                        logger.error(f"Error with explicit poppler path: {str(e3)}")
+                        raise e2
+                
+                # Create a new PDF from compressed images
+                output_pdf = PdfWriter()
+                
+                for img in images:
+                    img_byte_array = io.BytesIO()
+                    img.save(img_byte_array, format='JPEG', quality=quality)
+                    img_byte_array.seek(0)
+                    
+                    # Create temporary PDF from image
+                    temp_pdf_path = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False).name
+                    c = canvas.Canvas(temp_pdf_path, pagesize=letter)
+                    c.drawImage(img_byte_array, 0, 0, width=letter[0], height=letter[1])
+                    c.save()
+                    
+                    # Add page to output PDF
+                    reader = PdfReader(temp_pdf_path)
+                    output_pdf.add_page(reader.pages[0])
+                    os.unlink(temp_pdf_path)
+                
+                # Save the compressed PDF
+                with open(output_path, "wb") as output_file:
+                    output_pdf.write(output_file)
+                
+                return output_path
+                
         except Exception as e:
             raise Exception(f"Error compressing PDF: {str(e)}")
 

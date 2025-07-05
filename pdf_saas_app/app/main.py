@@ -5,6 +5,7 @@ import os
 from pdf_saas_app.app.api import auth, documents, ai_chat, auth_google
 from pdf_saas_app.app.db.session import engine, Base
 from pdf_saas_app.app.config import settings
+from pdf_saas_app.app.services.redis_service import redis_service
 from starlette.middleware.sessions import SessionMiddleware
 
 # Create database tables if they don't exist
@@ -76,7 +77,45 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Enhanced health check including Redis status"""
+    health_status = {
+        "status": "healthy",
+        "services": {
+            "database": "healthy",
+            "storage": "healthy",
+            "redis": "unavailable"
+        }
+    }
+    
+    # Check Redis health
+    try:
+        redis_health = redis_service.health_check()
+        health_status["services"]["redis"] = redis_health["status"]
+        
+        if redis_health["status"] == "error":
+            health_status["status"] = "degraded"
+            health_status["redis_error"] = redis_health.get("error", "Unknown error")
+    except Exception as e:
+        health_status["services"]["redis"] = "error"
+        health_status["redis_error"] = str(e)
+    
+    return health_status
+
+@app.get("/cache/stats")
+async def get_cache_stats():
+    """Get cache statistics"""
+    from pdf_saas_app.app.utils.cache import CacheManager
+    return CacheManager.get_cache_stats()
+
+@app.get("/cache/clear")
+async def clear_cache():
+    """Clear all cache (admin endpoint)"""
+    if redis_service.is_available():
+        # Clear all cache keys (use with caution)
+        deleted_count = redis_service.clear_cache_pattern("*")
+        return {"message": f"Cleared {deleted_count} cache entries"}
+    else:
+        return {"message": "Redis not available"}
 
 if __name__ == "__main__":
     import uvicorn

@@ -20,12 +20,15 @@ services:
     build: .
     depends_on:
       - db
+      - redis
     environment:
       STORAGE_TYPE: local
       POSTGRES_SERVER: db
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-pdf_db}
+      DATABASE_URL=postgresql://postgres:password@db:5432/pdf_saas
+      REDIS_URL=redis://redis:6379/0
     ports:
       - "8000:8000"
     volumes:
@@ -33,5 +36,14 @@ services:
     env_file:
       - .env
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
 volumes:
-  pgdata: 
+  pgdata:
+  redis_data: 

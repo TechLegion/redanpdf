@@ -22,4 +22,11 @@ services:
       - key: AWS_SECRET_ACCESS_KEY
         sync: false
       - key: AZURE_STORAGE_CONNECTION_STRING
-        sync: false 
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: redis
+    name: pdf-saas-redis
+    ipAllowList: []
+    plan: free 

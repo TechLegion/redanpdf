@@ -136,7 +136,8 @@ class StorageService:
             file_identifier = os.path.normpath(file_identifier)
             
             if os.path.exists(file_identifier):
-                return file_identifier
+                # Ensure we return a string path, not a Path object
+                return str(file_identifier)
             else:
                 raise FileNotFoundError(f"File not found: {file_identifier}")
         
@@ -164,7 +165,8 @@ class StorageService:
                 download_stream = blob_client.download_blob()
                 file.write(download_stream.readall())
         
-        return temp_path
+        # Ensure we return a string path
+        return str(temp_path)
     
     def delete_file(self, file_identifier: str) -> bool:
         """Delete a file from storage"""

@@ -38,6 +38,22 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5500/pdf_saas_app/frontend/index.html"  # Optional, for redirect
     EXTRA: str = "allow"
 
+    # Redis Configuration
+    REDIS_URL: Optional[str] = None
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: Optional[str] = None
+    
+    # Rate Limiting
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_REQUESTS: int = 100  # requests per window
+    RATE_LIMIT_WINDOW: int = 3600   # 1 hour window
+    
+    # Caching
+    CACHE_ENABLED: bool = True
+    CACHE_DEFAULT_TTL: int = 3600   # 1 hour default TTL
+
     @field_validator("SQLALCHEMY_DATABASE_URI", mode="before")
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
