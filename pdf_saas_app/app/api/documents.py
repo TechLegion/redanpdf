@@ -637,7 +637,16 @@ async def image_to_pdf(
     db.refresh(db_document)
     if os.path.exists(output_path):
         os.remove(output_path)
-    return db_document
+    
+    # Return proper DocumentResponse
+    return DocumentResponse(
+        id=db_document.id,
+        filename=db_document.filename,
+        content_type="application/pdf",
+        text_content=None,  # No text content for image-to-pdf conversion
+        created_at=db_document.created_at,
+        download_url=f"/documents/{db_document.id}/download"
+    )
 
 @router.post("/{document_id}/to-epub")
 async def pdf_to_epub(
