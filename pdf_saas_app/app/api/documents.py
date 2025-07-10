@@ -16,6 +16,7 @@ import logging
 import io
 import fitz  # PyMuPDF
 import hashlib
+import mimetypes
 
 from pdf_saas_app.app.db.session import get_db
 from pdf_saas_app.app.db.models import User, Document
@@ -23,6 +24,33 @@ from pdf_saas_app.app.services.auth_services import get_current_active_user
 from pdf_saas_app.app.services.storage_service import StorageService
 from pdf_saas_app.app.core.pdf_operations import PDFProcessor
 from pdf_saas_app.app.utils.cache import cache_response, invalidate_cache, CacheManager
+
+def validate_file_type(file: UploadFile, allowed_extensions: List[str], allowed_mime_types: List[str]) -> None:
+    """
+    Validate that the uploaded file has the correct extension and MIME type.
+    
+    Args:
+        file: The uploaded file
+        allowed_extensions: List of allowed file extensions (e.g., ['.docx', '.doc'])
+        allowed_mime_types: List of allowed MIME types (e.g., ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+    
+    Raises:
+        HTTPException: If the file type is not allowed
+    """
+    # Check file extension
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    if file_extension not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed types: {', '.join(allowed_extensions)}"
+        )
+    
+    # Check MIME type
+    if file.content_type not in allowed_mime_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid MIME type. Expected one of: {', '.join(allowed_mime_types)}"
+        )
 
 router = APIRouter()
 pdf_processor = PDFProcessor()
@@ -58,17 +86,39 @@ async def upload_document(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Upload a PDF document
+    Upload any document file
     """
-    # Validate file is a PDF
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be a PDF"
-        )
+    # Get file extension and determine file type
+    file_extension = os.path.splitext(file.filename)[1].lower()
     
-    # Create temp file
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    # Determine file type based on extension
+    file_type_mapping = {
+        '.pdf': 'pdf',
+        '.doc': 'doc',
+        '.docx': 'docx',
+        '.xls': 'xls',
+        '.xlsx': 'xlsx',
+        '.ppt': 'ppt',
+        '.pptx': 'pptx',
+        '.txt': 'txt',
+        '.rtf': 'rtf',
+        '.odt': 'odt',
+        '.ods': 'ods',
+        '.odp': 'odp',
+        '.csv': 'csv',
+        '.jpg': 'jpg',
+        '.jpeg': 'jpg',
+        '.png': 'png',
+        '.gif': 'gif',
+        '.bmp': 'bmp',
+        '.tiff': 'tiff',
+        '.tif': 'tiff'
+    }
+    
+    file_type = file_type_mapping.get(file_extension, 'unknown')
+    
+    # Create temp file with appropriate suffix
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension)
     try:
         # Save uploaded file to temp location
         with temp_file as buffer:
@@ -99,14 +149,17 @@ async def upload_document(
         storage_service = StorageService()
         file_path = storage_service.upload_file(temp_file.name, file.filename)
         
+        # Determine MIME type
+        mime_type = file.content_type if file.content_type else 'application/octet-stream'
+        
         # Save document in database
         db_document = Document(
             filename=file.filename,
             original_filename=file.filename,
             file_path=file_path,
             file_size=file_size,
-            mime_type="application/pdf",
-            file_type="pdf",
+            mime_type=mime_type,
+            file_type=file_type,
             owner_id=current_user.id,
             file_hash=file_hash
         )
@@ -115,13 +168,18 @@ async def upload_document(
         db.commit()
         db.refresh(db_document)
         
-        # Extract text content for the response
-        text_content = pdf_processor.extract_text(temp_file.name)
+        # Extract text content only for PDFs
+        text_content = None
+        if file_type == 'pdf':
+            try:
+                text_content = pdf_processor.extract_text(temp_file.name)
+            except Exception as e:
+                logger.warning(f"Could not extract text from PDF: {str(e)}")
         
         return DocumentResponse(
             id=db_document.id,
             filename=db_document.filename,
-            content_type="application/pdf",
+            content_type=mime_type,
             text_content=text_content,
             created_at=db_document.created_at,
             download_url=f"/documents/{db_document.id}/download"
@@ -146,11 +204,16 @@ async def list_documents(
     # Convert Document models to DocumentResponse models
     response_documents = []
     for doc in documents:
+        # Get text content only for PDFs
+        text_content = None
+        if doc.file_type == 'pdf':
+            text_content = doc.get_text_content()
+        
         response_documents.append(DocumentResponse(
             id=doc.id,
             filename=doc.filename,
-            content_type="application/pdf",  # All documents are PDFs
-            text_content=doc.get_text_content(),  # Use the method instead of direct attribute
+            content_type=doc.mime_type or "application/octet-stream",
+            text_content=text_content,
             created_at=doc.created_at,
             download_url=f"/documents/{doc.id}/download"
         ))
@@ -179,13 +242,15 @@ async def get_document(
     document.last_accessed = func.now()
     db.commit()
     
-    # Get text content using the method
-    text_content = document.get_text_content()
+    # Get text content only for PDFs
+    text_content = None
+    if document.file_type == 'pdf':
+        text_content = document.get_text_content()
     
     return DocumentResponse(
         id=document.id,
         filename=document.filename,
-        content_type="application/pdf",
+        content_type=document.mime_type or "application/octet-stream",
         text_content=text_content,
         created_at=document.created_at,
         download_url=f"/documents/{document.id}/download"
@@ -216,7 +281,7 @@ async def download_document(
         local_file_path = storage_service.get_file(document.file_path)
         return FileResponse(
             local_file_path,
-            media_type="application/pdf",
+            media_type=document.mime_type or "application/octet-stream",
             filename=document.filename
         )
     except FileNotFoundError as e:
@@ -561,6 +626,7 @@ async def image_to_pdf(
     file_path = storage_service.upload_file(output_path, output_filename)
     db_document = Document(
         filename=output_filename,
+        original_filename=output_filename,  # Set to output_filename or a concatenation of image names if desired
         file_path=file_path,
         file_size=file_size,
         mime_type="application/pdf",
@@ -713,6 +779,17 @@ async def word_to_pdf(
     current_user: User = Depends(get_current_active_user)
 ):
     """Convert Word document to PDF"""
+    # Validate file type
+    allowed_extensions = ['.docx', '.doc', '.rtf', '.odt']
+    allowed_mime_types = [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  # .docx
+        'application/msword',  # .doc
+        'application/rtf',  # .rtf
+        'application/vnd.oasis.opendocument.text',  # .odt
+        'text/rtf'  # .rtf alternative
+    ]
+    validate_file_type(file, allowed_extensions, allowed_mime_types)
+    
     try:
         # Create a temporary file for the input
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_input:
@@ -859,6 +936,17 @@ async def excel_to_pdf(
     current_user: User = Depends(get_current_active_user)
 ):
     """Convert Excel document to PDF"""
+    # Validate file type
+    allowed_extensions = ['.xlsx', '.xls', '.ods', '.csv']
+    allowed_mime_types = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # .xlsx
+        'application/vnd.ms-excel',  # .xls
+        'application/vnd.oasis.opendocument.spreadsheet',  # .ods
+        'text/csv',  # .csv
+        'application/csv'  # .csv alternative
+    ]
+    validate_file_type(file, allowed_extensions, allowed_mime_types)
+    
     try:
         # Create a temporary file for the input
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_input:
@@ -1003,6 +1091,15 @@ async def ppt_to_pdf(
     current_user: User = Depends(get_current_active_user)
 ):
     """Convert PowerPoint document to PDF"""
+    # Validate file type
+    allowed_extensions = ['.pptx', '.ppt', '.odp']
+    allowed_mime_types = [
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',  # .pptx
+        'application/vnd.ms-powerpoint',  # .ppt
+        'application/vnd.oasis.opendocument.presentation'  # .odp
+    ]
+    validate_file_type(file, allowed_extensions, allowed_mime_types)
+    
     try:
         # Create a temporary file for the input
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pptx') as temp_input:
