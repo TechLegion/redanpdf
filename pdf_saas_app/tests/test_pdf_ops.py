@@ -40,3 +40,125 @@ def test_upload_list_delete_pdf():
     # Clean up test PDF
     if os.path.exists(sample_pdf_path):
         os.remove(sample_pdf_path) 
+
+def test_edit_text_on_page():
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    sample_pdf_path = "sample.pdf"
+    if not os.path.exists(sample_pdf_path):
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(sample_pdf_path)
+        c.drawString(100, 750, "Hello, PDF!")
+        c.save()
+    with open(sample_pdf_path, "rb") as f:
+        files = {"file": ("sample.pdf", f, "application/pdf")}
+        upload_response = client.post("/pdfs/upload", files=files, headers=headers)
+        assert upload_response.status_code == 200
+        pdf_id = upload_response.json()["id"]
+    # Edit text
+    resp = client.post(f"/pdfs/{pdf_id}/edit_text", params={"page_number": 0, "old_text": "Hello, PDF!", "new_text": "Hi, PDF!"}, headers=headers)
+    assert resp.status_code == 200
+    assert "output_path" in resp.json()
+
+def test_add_text_to_page():
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    sample_pdf_path = "sample.pdf"
+    if not os.path.exists(sample_pdf_path):
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(sample_pdf_path)
+        c.drawString(100, 750, "Hello, PDF!")
+        c.save()
+    with open(sample_pdf_path, "rb") as f:
+        files = {"file": ("sample.pdf", f, "application/pdf")}
+        upload_response = client.post("/pdfs/upload", files=files, headers=headers)
+        assert upload_response.status_code == 200
+        pdf_id = upload_response.json()["id"]
+    # Add text
+    resp = client.post(f"/pdfs/{pdf_id}/add_text", params={"page_number": 0, "text": "Added Text", "x": 100, "y": 700, "font_size": 14}, headers=headers)
+    assert resp.status_code == 200
+    assert "output_path" in resp.json()
+
+def test_add_image_to_page():
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    sample_pdf_path = "sample.pdf"
+    image_path = "test_image.png"
+    if not os.path.exists(sample_pdf_path):
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(sample_pdf_path)
+        c.drawString(100, 750, "Hello, PDF!")
+        c.save()
+    if not os.path.exists(image_path):
+        from PIL import Image
+        img = Image.new('RGB', (50, 50), color = 'red')
+        img.save(image_path)
+    with open(sample_pdf_path, "rb") as f:
+        files = {"file": ("sample.pdf", f, "application/pdf")}
+        upload_response = client.post("/pdfs/upload", files=files, headers=headers)
+        assert upload_response.status_code == 200
+        pdf_id = upload_response.json()["id"]
+    # Add image
+    resp = client.post(f"/pdfs/{pdf_id}/add_image", params={"page_number": 0, "image_path": image_path, "x": 120, "y": 650, "width": 50, "height": 50}, headers=headers)
+    assert resp.status_code == 200
+    assert "output_path" in resp.json()
+
+def test_remove_images_from_page():
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    sample_pdf_path = "sample.pdf"
+    if not os.path.exists(sample_pdf_path):
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(sample_pdf_path)
+        c.drawString(100, 750, "Hello, PDF!")
+        c.save()
+    with open(sample_pdf_path, "rb") as f:
+        files = {"file": ("sample.pdf", f, "application/pdf")}
+        upload_response = client.post("/pdfs/upload", files=files, headers=headers)
+        assert upload_response.status_code == 200
+        pdf_id = upload_response.json()["id"]
+    # Remove images
+    resp = client.post(f"/pdfs/{pdf_id}/remove_images", params={"page_number": 0}, headers=headers)
+    assert resp.status_code == 200
+    assert "output_path" in resp.json()
+
+def test_annotate_page():
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    sample_pdf_path = "sample.pdf"
+    if not os.path.exists(sample_pdf_path):
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(sample_pdf_path)
+        c.drawString(100, 750, "Hello, PDF!")
+        c.save()
+    with open(sample_pdf_path, "rb") as f:
+        files = {"file": ("sample.pdf", f, "application/pdf")}
+        upload_response = client.post("/pdfs/upload", files=files, headers=headers)
+        assert upload_response.status_code == 200
+        pdf_id = upload_response.json()["id"]
+    # Annotate (highlight)
+    data = {"rects": [[100, 740, 200, 760]]}
+    resp = client.post(f"/pdfs/{pdf_id}/annotate", params={"page_number": 0, "annotation_type": "highlight", "data": str(data)}, headers=headers)
+    assert resp.status_code == 200
+    assert "output_path" in resp.json()
+
+def test_reorder_pages():
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    sample_pdf_path = "sample.pdf"
+    if not os.path.exists(sample_pdf_path):
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(sample_pdf_path)
+        c.drawString(100, 750, "Hello, PDF!")
+        c.showPage()
+        c.drawString(100, 750, "Second Page!")
+        c.save()
+    with open(sample_pdf_path, "rb") as f:
+        files = {"file": ("sample.pdf", f, "application/pdf")}
+        upload_response = client.post("/pdfs/upload", files=files, headers=headers)
+        assert upload_response.status_code == 200
+        pdf_id = upload_response.json()["id"]
+    # Reorder pages (swap page 0 and 1)
+    resp = client.post(f"/pdfs/{pdf_id}/reorder_pages", json={"new_order": [1, 0]}, headers=headers)
+    assert resp.status_code == 200
+    assert "output_path" in resp.json() 

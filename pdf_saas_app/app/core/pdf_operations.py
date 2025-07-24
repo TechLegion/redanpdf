@@ -474,3 +474,114 @@ class PDFProcessor:
         except Exception as e:
             logger.error(f"Error converting Office document to PDF: {str(e)}")
             raise Exception(f"Failed to convert document: {str(e)}")
+
+    def edit_text_on_page(self, file_path: str, output_path: str, page_number: int, old_text: str, new_text: str) -> str:
+        """
+        Replace occurrences of old_text with new_text on a specific page of the PDF.
+        """
+        try:
+            doc = fitz.open(file_path)
+            page = doc[page_number]
+            text_instances = page.search_for(old_text)
+            for inst in text_instances:
+                # Redact the old text
+                page.add_redact_annot(inst, fill=(1, 1, 1))
+            page.apply_redactions()
+            for inst in text_instances:
+                # Add new text at the same position
+                page.insert_text((inst.x0, inst.y0), new_text, fontsize=12, color=(0, 0, 0))
+            doc.save(output_path)
+            doc.close()
+            return output_path
+        except Exception as e:
+            raise Exception(f"Error editing text on page: {str(e)}")
+
+    def add_text_to_page(self, file_path: str, output_path: str, page_number: int, text: str, position: tuple, font_size: int = 12) -> str:
+        """
+        Add new text to a specific position on a page.
+        """
+        try:
+            doc = fitz.open(file_path)
+            page = doc[page_number]
+            page.insert_text(position, text, fontsize=font_size, color=(0, 0, 0))
+            doc.save(output_path)
+            doc.close()
+            return output_path
+        except Exception as e:
+            raise Exception(f"Error adding text to page: {str(e)}")
+
+    def add_image_to_page(self, file_path: str, output_path: str, page_number: int, image_path: str, position: tuple, size: tuple = None) -> str:
+        """
+        Add an image to a specific position on a page.
+        """
+        try:
+            doc = fitz.open(file_path)
+            page = doc[page_number]
+            rect = fitz.Rect(position[0], position[1], position[0] + (size[0] if size else 100), position[1] + (size[1] if size else 100))
+            page.insert_image(rect, filename=image_path)
+            doc.save(output_path)
+            doc.close()
+            return output_path
+        except Exception as e:
+            raise Exception(f"Error adding image to page: {str(e)}")
+
+    def remove_images_from_page(self, file_path: str, output_path: str, page_number: int) -> str:
+        """
+        Remove all images from a specific page.
+        """
+        try:
+            doc = fitz.open(file_path)
+            page = doc[page_number]
+            img_list = page.get_images(full=True)
+            for img in img_list:
+                xref = img[0]
+                page._wrapContents()
+                page._deleteObject(xref)
+            doc.save(output_path)
+            doc.close()
+            return output_path
+        except Exception as e:
+            raise Exception(f"Error removing images from page: {str(e)}")
+
+    def annotate_page(self, file_path: str, output_path: str, page_number: int, annotation_type: str, data: dict) -> str:
+        """
+        Add an annotation (highlight, comment, drawing) to a page.
+        annotation_type: 'highlight', 'comment', 'draw'
+        data: parameters for the annotation
+        """
+        try:
+            doc = fitz.open(file_path)
+            page = doc[page_number]
+            if annotation_type == 'highlight':
+                rects = [fitz.Rect(*rect) for rect in data.get('rects', [])]
+                for rect in rects:
+                    page.add_highlight_annot(rect)
+            elif annotation_type == 'comment':
+                pos = tuple(data.get('position', (72, 72)))
+                text = data.get('text', '')
+                page.add_text_annot(pos, text)
+            elif annotation_type == 'draw':
+                points = data.get('points', [])
+                if points:
+                    shape = page.new_shape()
+                    shape.draw_polyline(points)
+                    shape.finish(color=(1, 0, 0), width=2)
+                    shape.commit()
+            doc.save(output_path)
+            doc.close()
+            return output_path
+        except Exception as e:
+            raise Exception(f"Error annotating page: {str(e)}")
+
+    def reorder_pages(self, file_path: str, output_path: str, new_order: list) -> str:
+        """
+        Reorder the pages of a PDF according to new_order (list of page indices, 0-based).
+        """
+        try:
+            doc = fitz.open(file_path)
+            doc.select(new_order)
+            doc.save(output_path)
+            doc.close()
+            return output_path
+        except Exception as e:
+            raise Exception(f"Error reordering pages: {str(e)}")

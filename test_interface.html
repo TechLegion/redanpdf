@@ -399,6 +399,185 @@
             </div>
         </div>
 
+        <!-- Edit PDF Section: Insert after PDF Operations, before AI Features -->
+        <h3 class="mt-4">Edit PDF</h3>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card endpoint-card">
+              <div class="card-body">
+                <h5 class="card-title">Edit Text on Page</h5>
+                <form id="editTextForm">
+                  <div class="mb-2">
+                    <label for="editTextDocumentId" class="form-label">Document ID</label>
+                    <input type="text" class="form-control" id="editTextDocumentId" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="editTextPage" class="form-label">Page # (0-based)</label>
+                    <input type="number" class="form-control" id="editTextPage" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="editTextOld" class="form-label">Old Text</label>
+                    <input type="text" class="form-control" id="editTextOld" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="editTextNew" class="form-label">New Text</label>
+                    <input type="text" class="form-control" id="editTextNew" required>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Edit Text</button>
+                </form>
+                <div class="response-area mt-2" id="editTextResponse"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card endpoint-card">
+              <div class="card-body">
+                <h5 class="card-title">Add Text to Page</h5>
+                <form id="addTextForm">
+                  <div class="mb-2">
+                    <label for="addTextDocumentId" class="form-label">Document ID</label>
+                    <input type="text" class="form-control" id="addTextDocumentId" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addTextPage" class="form-label">Page # (0-based)</label>
+                    <input type="number" class="form-control" id="addTextPage" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addTextContent" class="form-label">Text</label>
+                    <input type="text" class="form-control" id="addTextContent" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addTextX" class="form-label">X</label>
+                    <input type="number" class="form-control" id="addTextX" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addTextY" class="form-label">Y</label>
+                    <input type="number" class="form-control" id="addTextY" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addTextFontSize" class="form-label">Font Size (default 12)</label>
+                    <input type="number" class="form-control" id="addTextFontSize">
+                  </div>
+                  <button type="submit" class="btn btn-primary">Add Text</button>
+                </form>
+                <div class="response-area mt-2" id="addTextResponse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card endpoint-card">
+              <div class="card-body">
+                <h5 class="card-title">Add Image to Page</h5>
+                <form id="addImageForm">
+                  <div class="mb-2">
+                    <label for="addImageDocumentId" class="form-label">Document ID</label>
+                    <input type="text" class="form-control" id="addImageDocumentId" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addImagePage" class="form-label">Page # (0-based)</label>
+                    <input type="number" class="form-control" id="addImagePage" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addImageFile" class="form-label">Image File (not implemented)</label>
+                    <input type="file" class="form-control" id="addImageFile" accept="image/*">
+                  </div>
+                  <div class="mb-2">
+                    <label for="addImageX" class="form-label">X</label>
+                    <input type="number" class="form-control" id="addImageX" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addImageY" class="form-label">Y</label>
+                    <input type="number" class="form-control" id="addImageY" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="addImageW" class="form-label">Width (optional)</label>
+                    <input type="number" class="form-control" id="addImageW">
+                  </div>
+                  <div class="mb-2">
+                    <label for="addImageH" class="form-label">Height (optional)</label>
+                    <input type="number" class="form-control" id="addImageH">
+                  </div>
+                  <button type="submit" class="btn btn-primary">Add Image</button>
+                </form>
+                <div class="response-area mt-2" id="addImageResponse"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card endpoint-card">
+              <div class="card-body">
+                <h5 class="card-title">Remove Images from Page</h5>
+                <form id="removeImagesForm">
+                  <div class="mb-2">
+                    <label for="removeImagesDocumentId" class="form-label">Document ID</label>
+                    <input type="text" class="form-control" id="removeImagesDocumentId" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="removeImagesPage" class="form-label">Page # (0-based)</label>
+                    <input type="number" class="form-control" id="removeImagesPage" required>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Remove Images</button>
+                </form>
+                <div class="response-area mt-2" id="removeImagesResponse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card endpoint-card">
+              <div class="card-body">
+                <h5 class="card-title">Annotate Page</h5>
+                <form id="annotateForm">
+                  <div class="mb-2">
+                    <label for="annotateDocumentId" class="form-label">Document ID</label>
+                    <input type="text" class="form-control" id="annotateDocumentId" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="annotatePage" class="form-label">Page # (0-based)</label>
+                    <input type="number" class="form-control" id="annotatePage" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="annotateType" class="form-label">Type</label>
+                    <select class="form-select" id="annotateType">
+                      <option value="highlight">Highlight</option>
+                      <option value="comment">Comment</option>
+                      <option value="draw">Draw</option>
+                    </select>
+                  </div>
+                  <div class="mb-2">
+                    <label for="annotateData" class="form-label">Data (JSON)</label>
+                    <input type="text" class="form-control" id="annotateData" placeholder='{"rects": [[100,740,200,760]]}'>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Annotate</button>
+                </form>
+                <div class="response-area mt-2" id="annotateResponse"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card endpoint-card">
+              <div class="card-body">
+                <h5 class="card-title">Reorder Pages</h5>
+                <form id="reorderPagesForm">
+                  <div class="mb-2">
+                    <label for="reorderPagesDocumentId" class="form-label">Document ID</label>
+                    <input type="text" class="form-control" id="reorderPagesDocumentId" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="reorderPagesOrder" class="form-label">New Order (comma-separated, e.g. 1,0)</label>
+                    <input type="text" class="form-control" id="reorderPagesOrder" required>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Reorder</button>
+                </form>
+                <div class="response-area mt-2" id="reorderPagesResponse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- AI Features Section -->
         <h3 class="mt-4">AI Features</h3>
         <div class="row">
@@ -1026,6 +1205,69 @@ The compressed PDF has been added to your documents. You can download it using t
                 }
             });
         }
+
+        document.getElementById('editTextForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('editTextDocumentId').value;
+          const page = document.getElementById('editTextPage').value;
+          const oldText = document.getElementById('editTextOld').value;
+          const newText = document.getElementById('editTextNew').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/pdfs/${docId}/edit_text?page_number=${page}&old_text=${encodeURIComponent(oldText)}&new_text=${encodeURIComponent(newText)}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('editTextResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('editTextResponse').textContent = e.message; }
+        };
+        document.getElementById('addTextForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('addTextDocumentId').value;
+          const page = document.getElementById('addTextPage').value;
+          const text = document.getElementById('addTextContent').value;
+          const x = document.getElementById('addTextX').value;
+          const y = document.getElementById('addTextY').value;
+          const fontSize = document.getElementById('addTextFontSize').value || 12;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/pdfs/${docId}/add_text?page_number=${page}&text=${encodeURIComponent(text)}&x=${x}&y=${y}&font_size=${fontSize}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('addTextResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('addTextResponse').textContent = e.message; }
+        };
+        document.getElementById('addImageForm').onsubmit = async function(e) {
+          e.preventDefault();
+          alert('Image upload not implemented in demo. Backend must support image upload.');
+        };
+        document.getElementById('removeImagesForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('removeImagesDocumentId').value;
+          const page = document.getElementById('removeImagesPage').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/pdfs/${docId}/remove_images?page_number=${page}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('removeImagesResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('removeImagesResponse').textContent = e.message; }
+        };
+        document.getElementById('annotateForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('annotateDocumentId').value;
+          const page = document.getElementById('annotatePage').value;
+          const type = document.getElementById('annotateType').value;
+          const data = document.getElementById('annotateData').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/pdfs/${docId}/annotate?page_number=${page}&annotation_type=${type}&data=${encodeURIComponent(data)}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('annotateResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('annotateResponse').textContent = e.message; }
+        };
+        document.getElementById('reorderPagesForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('reorderPagesDocumentId').value;
+          const order = document.getElementById('reorderPagesOrder').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/pdfs/${docId}/reorder_pages`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({new_order: order.split(',').map(x => parseInt(x.trim()))})});
+            const result = await resp.json();
+            document.getElementById('reorderPagesResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('reorderPagesResponse').textContent = e.message; }
+        };
     </script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

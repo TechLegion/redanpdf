@@ -1481,6 +1481,78 @@
             }
         });
 
+        // PDF Editing Feature Handlers
+        function getSelectedDocId() {
+          return document.getElementById('documentList').value;
+        }
+        document.getElementById('btnEditText').onclick = async function() {
+          const docId = getSelectedDocId();
+          const page = document.getElementById('editTextPage').value;
+          const oldText = document.getElementById('editTextOld').value;
+          const newText = document.getElementById('editTextNew').value;
+          if (!docId) return alert('Select a document');
+          try {
+            const result = await callAPI(`/pdfs/${docId}/edit_text?` + new URLSearchParams({page_number: page, old_text: oldText, new_text: newText}), null, 'POST');
+            document.getElementById('editTextResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('editTextResponse').textContent = e.message; }
+        };
+        document.getElementById('btnAddText').onclick = async function() {
+          const docId = getSelectedDocId();
+          const page = document.getElementById('addTextPage').value;
+          const text = document.getElementById('addTextContent').value;
+          const x = document.getElementById('addTextX').value;
+          const y = document.getElementById('addTextY').value;
+          const fontSize = document.getElementById('addTextFontSize').value || 12;
+          if (!docId) return alert('Select a document');
+          try {
+            const result = await callAPI(`/pdfs/${docId}/add_text?` + new URLSearchParams({page_number: page, text, x, y, font_size: fontSize}), null, 'POST');
+            document.getElementById('addTextResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('addTextResponse').textContent = e.message; }
+        };
+        document.getElementById('btnAddImage').onclick = async function() {
+          const docId = getSelectedDocId();
+          const page = document.getElementById('addImagePage').value;
+          const x = document.getElementById('addImageX').value;
+          const y = document.getElementById('addImageY').value;
+          const w = document.getElementById('addImageW').value;
+          const h = document.getElementById('addImageH').value;
+          const fileInput = document.getElementById('addImageFile');
+          if (!docId) return alert('Select a document');
+          if (!fileInput.files[0]) return alert('Select an image file');
+          // Upload image to server or use a temp endpoint (for demo, assume image is already on server)
+          // For now, this will not work unless backend supports image upload or static path
+          alert('Image upload not implemented in demo. Backend must support image upload.');
+        };
+        document.getElementById('btnRemoveImages').onclick = async function() {
+          const docId = getSelectedDocId();
+          const page = document.getElementById('removeImagesPage').value;
+          if (!docId) return alert('Select a document');
+          try {
+            const result = await callAPI(`/pdfs/${docId}/remove_images?` + new URLSearchParams({page_number: page}), null, 'POST');
+            document.getElementById('removeImagesResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('removeImagesResponse').textContent = e.message; }
+        };
+        document.getElementById('btnAnnotate').onclick = async function() {
+          const docId = getSelectedDocId();
+          const page = document.getElementById('annotatePage').value;
+          const type = document.getElementById('annotateType').value;
+          const data = document.getElementById('annotateData').value;
+          if (!docId) return alert('Select a document');
+          try {
+            const result = await callAPI(`/pdfs/${docId}/annotate?` + new URLSearchParams({page_number: page, annotation_type: type, data}), null, 'POST');
+            document.getElementById('annotateResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('annotateResponse').textContent = e.message; }
+        };
+        document.getElementById('btnReorderPages').onclick = async function() {
+          const docId = getSelectedDocId();
+          const order = document.getElementById('reorderPagesOrder').value;
+          if (!docId) return alert('Select a document');
+          try {
+            const result = await callAPI(`/pdfs/${docId}/reorder_pages`, {new_order: order.split(',').map(x => parseInt(x.trim()))}, 'POST');
+            document.getElementById('reorderPagesResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('reorderPagesResponse').textContent = e.message; }
+        };
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Check for existing token

@@ -1455,6 +1455,69 @@ The compressed PDF has been added to your documents. You can download it using t
                 document.getElementById('compressPdfResponse').textContent = 'Error: ' + error.message;
             }
         });
+
+        document.getElementById('editTextForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('editTextDocumentId').value;
+          const page = document.getElementById('editTextPage').value;
+          const oldText = document.getElementById('editTextOld').value;
+          const newText = document.getElementById('editTextNew').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/documents/${docId}/edit_text?page_number=${page}&old_text=${encodeURIComponent(oldText)}&new_text=${encodeURIComponent(newText)}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('editTextResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('editTextResponse').textContent = e.message; }
+        };
+        document.getElementById('addTextForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('addTextDocumentId').value;
+          const page = document.getElementById('addTextPage').value;
+          const text = document.getElementById('addTextContent').value;
+          const x = document.getElementById('addTextX').value;
+          const y = document.getElementById('addTextY').value;
+          const fontSize = document.getElementById('addTextFontSize').value || 12;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/documents/${docId}/add_text?page_number=${page}&text=${encodeURIComponent(text)}&x=${x}&y=${y}&font_size=${fontSize}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('addTextResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('addTextResponse').textContent = e.message; }
+        };
+        document.getElementById('addImageForm').onsubmit = async function(e) {
+          e.preventDefault();
+          alert('Image upload not implemented in demo. Backend must support image upload.');
+        };
+        document.getElementById('removeImagesForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('removeImagesDocumentId').value;
+          const page = document.getElementById('removeImagesPage').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/documents/${docId}/remove_images?page_number=${page}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('removeImagesResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('removeImagesResponse').textContent = e.message; }
+        };
+        document.getElementById('annotateForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('annotateDocumentId').value;
+          const page = document.getElementById('annotatePage').value;
+          const type = document.getElementById('annotateType').value;
+          const data = document.getElementById('annotateData').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/documents/${docId}/annotate?page_number=${page}&annotation_type=${type}&data=${encodeURIComponent(data)}`, {method: 'POST'});
+            const result = await resp.json();
+            document.getElementById('annotateResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('annotateResponse').textContent = e.message; }
+        };
+        document.getElementById('reorderPagesForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const docId = document.getElementById('reorderPagesDocumentId').value;
+          const order = document.getElementById('reorderPagesOrder').value;
+          try {
+            const resp = await fetch(`${API_BASE_URL}/documents/${docId}/reorder_pages`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({new_order: order.split(',').map(x => parseInt(x.trim()))})});
+            const result = await resp.json();
+            document.getElementById('reorderPagesResponse').textContent = JSON.stringify(result, null, 2);
+          } catch (e) { document.getElementById('reorderPagesResponse').textContent = e.message; }
+        };
     </script>
 </body>
 </html> 
