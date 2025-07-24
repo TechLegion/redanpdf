@@ -1,10 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response
 from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.services import pdf_services
+from pdf_saas_app.app.db.session import get_db
+from pdf_saas_app.app.services import pdf_services
 import shutil
 import os
-from app.core.pdf_operations import PDFProcessor
+from pdf_saas_app.app.core.pdf_operations import PDFProcessor
 
 router = APIRouter(prefix="/pdfs", tags=["PDFs"])
 
