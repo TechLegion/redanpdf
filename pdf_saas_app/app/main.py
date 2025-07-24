@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
-from pdf_saas_app.app.api import auth, documents, ai_chat, auth_google
+from pdf_saas_app.app.api import auth, documents, ai_chat, auth_google, pdf
 from pdf_saas_app.app.db.session import engine, Base
 from pdf_saas_app.app.config import settings
 from pdf_saas_app.app.services.redis_service import redis_service
@@ -66,6 +66,12 @@ app.include_router(
     auth_google.router,
     prefix=f"{settings.API_V1_STR}/auth/google",
     tags=["authentication"]
+)
+
+app.include_router(
+    pdf.router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["pdf-edit"]
 )
 
 @app.get("/")
