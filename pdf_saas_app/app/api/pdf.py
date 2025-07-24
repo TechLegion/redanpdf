@@ -5,6 +5,7 @@ from pdf_saas_app.app.services import pdf_services
 import shutil
 import os
 from pdf_saas_app.app.core.pdf_operations import PDFProcessor
+from pdf_saas_app.app.db.models import Document
 
 router = APIRouter(prefix="/pdfs", tags=["PDFs"])
 
@@ -22,72 +23,75 @@ def list_pdfs(db: Session = Depends(get_db)):
     return [{"id": pdf.id, "filename": pdf.filename, "upload_date": pdf.upload_date} for pdf in pdfs]
 
 @router.get("/{pdf_id}")
-def download_pdf(pdf_id: int, db: Session = Depends(get_db)):
-    pdf = pdf_services.get_pdf(db, pdf_id)
-    if not pdf or not os.path.exists(pdf.file_path):
+def download_pdf(pdf_id: str, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    with open(pdf.file_path, "rb") as f:
+    with open(doc.file_path, "rb") as f:
         return Response(content=f.read(), media_type="application/pdf")
 
 @router.delete("/{pdf_id}")
-def delete_pdf(pdf_id: int, db: Session = Depends(get_db)):
-    success = pdf_services.delete_pdf(db, pdf_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="PDF not found")
-    return {"detail": "PDF deleted"}
+def delete_pdf(pdf_id: str, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if doc:
+        db.delete(doc)
+        db.commit()
+        if os.path.exists(doc.file_path):
+            os.remove(doc.file_path)
+        return {"detail": "PDF deleted"}
+    raise HTTPException(status_code=404, detail="PDF not found")
 
 @router.post("/{pdf_id}/edit_text")
-def edit_text(pdf_id: int, page_number: int, old_text: str, new_text: str, db: Session = Depends(get_db)):
-    # Placeholder: fetch PDF path from DB
-    pdf = pdf_services.get_pdf(db, pdf_id)
-    if not pdf or not os.path.exists(pdf.file_path):
+def edit_text(pdf_id: str, page_number: int, old_text: str, new_text: str, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    output_path = pdf.file_path + ".edited.pdf"
-    PDFProcessor().edit_text_on_page(pdf.file_path, output_path, page_number, old_text, new_text)
+    output_path = doc.file_path + ".edited.pdf"
+    PDFProcessor().edit_text_on_page(doc.file_path, output_path, page_number, old_text, new_text)
     return {"detail": "Text edit stub called", "output_path": output_path}
 
 @router.post("/{pdf_id}/add_text")
-def add_text(pdf_id: int, page_number: int, text: str, x: float, y: float, font_size: int = 12, db: Session = Depends(get_db)):
-    pdf = pdf_services.get_pdf(db, pdf_id)
-    if not pdf or not os.path.exists(pdf.file_path):
+def add_text(pdf_id: str, page_number: int, text: str, x: float, y: float, font_size: int = 12, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    output_path = pdf.file_path + ".addtext.pdf"
-    PDFProcessor().add_text_to_page(pdf.file_path, output_path, page_number, text, (x, y), font_size)
+    output_path = doc.file_path + ".addtext.pdf"
+    PDFProcessor().add_text_to_page(doc.file_path, output_path, page_number, text, (x, y), font_size)
     return {"detail": "Add text stub called", "output_path": output_path}
 
 @router.post("/{pdf_id}/add_image")
-def add_image(pdf_id: int, page_number: int, image_path: str, x: float, y: float, width: float = None, height: float = None, db: Session = Depends(get_db)):
-    pdf = pdf_services.get_pdf(db, pdf_id)
-    if not pdf or not os.path.exists(pdf.file_path):
+def add_image(pdf_id: str, page_number: int, image_path: str, x: float, y: float, width: float = None, height: float = None, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    output_path = pdf.file_path + ".addimage.pdf"
+    output_path = doc.file_path + ".addimage.pdf"
     size = (width, height) if width and height else None
-    PDFProcessor().add_image_to_page(pdf.file_path, output_path, page_number, image_path, (x, y), size)
+    PDFProcessor().add_image_to_page(doc.file_path, output_path, page_number, image_path, (x, y), size)
     return {"detail": "Add image stub called", "output_path": output_path}
 
 @router.post("/{pdf_id}/remove_images")
-def remove_images(pdf_id: int, page_number: int, db: Session = Depends(get_db)):
-    pdf = pdf_services.get_pdf(db, pdf_id)
-    if not pdf or not os.path.exists(pdf.file_path):
+def remove_images(pdf_id: str, page_number: int, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    output_path = pdf.file_path + ".noimages.pdf"
-    PDFProcessor().remove_images_from_page(pdf.file_path, output_path, page_number)
+    output_path = doc.file_path + ".noimages.pdf"
+    PDFProcessor().remove_images_from_page(doc.file_path, output_path, page_number)
     return {"detail": "Remove images stub called", "output_path": output_path}
 
 @router.post("/{pdf_id}/annotate")
-def annotate(pdf_id: int, page_number: int, annotation_type: str, data: dict, db: Session = Depends(get_db)):
-    pdf = pdf_services.get_pdf(db, pdf_id)
-    if not pdf or not os.path.exists(pdf.file_path):
+def annotate(pdf_id: str, page_number: int, annotation_type: str, data: dict, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    output_path = pdf.file_path + ".annotated.pdf"
-    PDFProcessor().annotate_page(pdf.file_path, output_path, page_number, annotation_type, data)
+    output_path = doc.file_path + ".annotated.pdf"
+    PDFProcessor().annotate_page(doc.file_path, output_path, page_number, annotation_type, data)
     return {"detail": "Annotate stub called", "output_path": output_path}
 
 @router.post("/{pdf_id}/reorder_pages")
-def reorder_pages(pdf_id: int, new_order: list, db: Session = Depends(get_db)):
-    pdf = pdf_services.get_pdf(db, pdf_id)
-    if not pdf or not os.path.exists(pdf.file_path):
+def reorder_pages(pdf_id: str, new_order: list, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    output_path = pdf.file_path + ".reordered.pdf"
-    PDFProcessor().reorder_pages(pdf.file_path, output_path, new_order)
+    output_path = doc.file_path + ".reordered.pdf"
+    PDFProcessor().reorder_pages(doc.file_path, output_path, new_order)
     return {"detail": "Reorder pages stub called", "output_path": output_path} 
