@@ -477,19 +477,41 @@ class PDFProcessor:
 
     def edit_text_on_page(self, file_path: str, output_path: str, page_number: int, old_text: str, new_text: str) -> str:
         """
-        Replace occurrences of old_text with new_text on a specific page of the PDF.
+        Replace occurrences of old_text with new_text on a specific page of the PDF, trying to match the original font and size.
         """
         try:
             doc = fitz.open(file_path)
             page = doc[page_number]
             text_instances = page.search_for(old_text)
+            # Try to get font info from the original text
+            fontname = None
+            fontsize = 12
+            color = (0, 0, 0)
+            blocks = page.get_text('dict')['blocks']
+            for b in blocks:
+                for l in b.get('lines', []):
+                    for s in l.get('spans', []):
+                        if old_text.strip() in s['text']:
+                            fontname = s.get('font', None)
+                            fontsize = s.get('size', 12)
+                            color = s.get('color', 0)
+                            break
+            # Redact the old text
             for inst in text_instances:
-                # Redact the old text
                 page.add_redact_annot(inst, fill=(1, 1, 1))
             page.apply_redactions()
             for inst in text_instances:
-                # Add new text at the same position
-                page.insert_text((inst.x0, inst.y0), new_text, fontsize=12, color=(0, 0, 0))
+                # Add new text at the same position, try to match font/size
+                try:
+                    page.insert_text(
+                        (inst.x0, inst.y0),
+                        new_text,
+                        fontsize=fontsize,
+                        fontname=fontname if fontname else "helv",
+                        color=color if isinstance(color, tuple) else (0, 0, 0)
+                    )
+                except Exception:
+                    page.insert_text((inst.x0, inst.y0), new_text, fontsize=fontsize, color=(0, 0, 0))
             doc.save(output_path)
             doc.close()
             return output_path
