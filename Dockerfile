@@ -1,73 +1,15 @@
-# Use an official Python image
-FROM python:3.11-slim
+# Use a more stable Python image
+FROM python:3.11-bullseye
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies in smaller, more manageable chunks
+# Test with just curl first
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    wget \
-    gnupg2 \
-    software-properties-common \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install basic system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    poppler-utils \
-    xz-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install LibreOffice and its dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libreoffice \
-    libreoffice-writer \
-    libreoffice-calc \
-    libreoffice-impress \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install additional libraries for GUI support (needed for some PDF operations)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libxrender1 \
-    libsm6 \
-    libxext6 \
-    fonts-liberation \
-    libfontconfig1 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxss1 \
-    libxtst6 \
-    libnss3 \
-    libcups2 \
-    libxshmfence1 \
-    libasound2 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libpangocairo-1.0-0 \
-    libgtk-3-0 \
-    libgbm1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Clean up
-RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN useradd -m -u 1000 appuser
