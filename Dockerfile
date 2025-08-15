@@ -6,22 +6,41 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies (Tesseract, libgl for pdf2image, etc.)
+# Install system dependencies in smaller, more manageable chunks
 RUN apt-get update && \
-    apt-get install -y \
-    tesseract-ocr \
-    libgl1-mesa-glx \
-    poppler-utils \
+    apt-get install -y --no-install-recommends \
     wget \
+    gnupg2 \
+    software-properties-common \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install basic system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    poppler-utils \
     xz-utils \
-    libglib2.0-0 \
-    libxrender1 \
-    libsm6 \
-    libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install LibreOffice and its dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     libreoffice \
     libreoffice-writer \
     libreoffice-calc \
     libreoffice-impress \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional libraries for GUI support (needed for some PDF operations)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libxrender1 \
+    libsm6 \
+    libxext6 \
     fonts-liberation \
     libfontconfig1 \
     libx11-6 \
@@ -44,9 +63,10 @@ RUN apt-get update && \
     libpangocairo-1.0-0 \
     libgtk-3-0 \
     libgbm1 \
-    calibre && \
-    # Clean up
-    apt-get clean && \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clean up
+RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Create a non-root user
