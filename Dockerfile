@@ -6,10 +6,29 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Test with just curl first
+# Install essential packages for PDF processing
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+    curl \
+    tesseract-ocr \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install LibreOffice for document conversion
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libreoffice \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install minimal GUI libraries for PDF operations
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libxrender1 \
+    libsm6 \
+    libxext6 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN useradd -m -u 1000 appuser
