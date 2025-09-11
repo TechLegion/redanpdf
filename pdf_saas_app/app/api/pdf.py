@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response, Form
 from sqlalchemy.orm import Session
 from pdf_saas_app.app.db.session import get_db
 from pdf_saas_app.app.services import pdf_services
@@ -143,7 +143,13 @@ def annotate(pdf_id: str, page_number: int, annotation_type: str, data: dict, db
     return {"detail": "Annotate complete", "new_document_id": new_doc.id, "download_url": new_doc.file_path}
 
 @router.post("/{pdf_id}/reorder_pages")
-def reorder_pages(pdf_id: str, new_order: list, db: Session = Depends(get_db)):
+def reorder_pages(pdf_id: str, new_order: str = Form(...), db: Session = Depends(get_db)):
+    import json
+    try:
+        new_order_list = json.loads(new_order)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid page order format")
+    
     doc = db.query(Document).filter(Document.id == pdf_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="PDF not found")
@@ -152,6 +158,6 @@ def reorder_pages(pdf_id: str, new_order: list, db: Session = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=404, detail="PDF not found")
     output_path = file_path + ".reordered.pdf"
-    PDFProcessor().reorder_pages(file_path, output_path, new_order)
+    PDFProcessor().reorder_pages(file_path, output_path, new_order_list)
     new_doc = _create_new_document_from_file(db, doc, output_path, suffix=" (reordered)")
     return {"detail": "Reorder pages complete", "new_document_id": new_doc.id, "download_url": new_doc.file_path} 
