@@ -13,11 +13,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     
     # DATABASE
-    POSTGRES_SERVER: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
-    SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
+    # Prefer a single DATABASE_URL if provided; fall back to individual POSTGRES_* parts
+    DATABASE_URL: Optional[str] = None
+    POSTGRES_SERVER: Optional[str] = None
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    POSTGRES_DB: Optional[str] = None
+    # Keep this as a generic string (not PostgresDsn) so any SQLAlchemy-supported backend works
+    SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
     # AI Services
     OPENAI_API_KEY: str
@@ -56,17 +59,33 @@ class Settings(BaseSettings):
 
     @field_validator("SQLALCHEMY_DATABASE_URI", mode="before")
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
-        if isinstance(v, str):
+        # 1) If explicitly provided, respect it
+        if isinstance(v, str) and v:
             return v
 
-        return PostgresDsn.build(
-            scheme="postgresql+psycopg",
-            username=values.data.get("POSTGRES_USER"),
-            password=values.data.get("POSTGRES_PASSWORD"),
-            host=values.data.get("POSTGRES_SERVER"),
-            path=f"{values.data.get('POSTGRES_DB') or ''}",
-            query="client_encoding=utf8"
-        )
+        # 2) If DATABASE_URL is provided, use it directly
+        database_url = values.data.get("DATABASE_URL")
+        if isinstance(database_url, str) and database_url:
+            return database_url
+
+        # 3) Fallback: construct from POSTGRES_* parts if available
+        pg_user = values.data.get("POSTGRES_USER")
+        pg_password = values.data.get("POSTGRES_PASSWORD")
+        pg_host = values.data.get("POSTGRES_SERVER")
+        pg_db = values.data.get("POSTGRES_DB")
+
+        if all([pg_user, pg_password, pg_host, pg_db]):
+            return PostgresDsn.build(
+                scheme="postgresql+psycopg",
+                username=pg_user,
+                password=pg_password,
+                host=pg_host,
+                path=f"{pg_db}",
+                query="client_encoding=utf8"
+            )
+
+        # 4) As a last resort, leave it None; the app should error clearly if DB URL is missing
+        return None
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="allow")
 
