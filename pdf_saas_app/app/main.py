@@ -30,7 +30,7 @@ app.add_middleware(
         "http://localhost:5500",
         "http://127.0.0.1:3000",
         "http://localhost:3000",
-        "https://redanpdf-1.onrender.com"
+        "https://redanpdf-kz99.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],

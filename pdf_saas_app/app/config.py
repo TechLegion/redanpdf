@@ -75,13 +75,16 @@ class Settings(BaseSettings):
         pg_db = values.data.get("POSTGRES_DB")
 
         if all([pg_user, pg_password, pg_host, pg_db]):
-            return PostgresDsn.build(
-                scheme="postgresql+psycopg",
-                username=pg_user,
-                password=pg_password,
-                host=pg_host,
-                path=f"{pg_db}",
-                query="client_encoding=utf8"
+            # Ensure we return a plain string to satisfy the field type
+            return str(
+                PostgresDsn.build(
+                    scheme="postgresql+psycopg",
+                    username=pg_user,
+                    password=pg_password,
+                    host=pg_host,
+                    path=f"{pg_db}",
+                    query="client_encoding=utf8"
+                )
             )
 
         # 4) As a last resort, leave it None; the app should error clearly if DB URL is missing

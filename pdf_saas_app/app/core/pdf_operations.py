@@ -7,6 +7,8 @@ from pdf2image import convert_from_path
 import io
 import tempfile
 from typing import List, Tuple, Optional
+from docx import Document as DocxDocument
+from docx.shared import Pt
 from PIL import Image
 import pytesseract
 import subprocess
@@ -607,3 +609,49 @@ class PDFProcessor:
             return output_path
         except Exception as e:
             raise Exception(f"Error reordering pages: {str(e)}")
+
+    def pdf_to_docx(self, file_path: str, output_path: str) -> str:
+        """
+        Convert a PDF to a DOCX file.
+
+        Strategy:
+        - Use PyMuPDF to extract text per page. If a page has no extractable text,
+          fallback to OCR (pytesseract) using the existing extract_text method.
+        - Write plain text to DOCX, insert page breaks between pages.
+
+        This preserves content but not layout. Suitable as a fast baseline.
+        """
+        try:
+            docx = DocxDocument()
+            with fitz.open(file_path) as pdf_doc:
+                for page_index in range(len(pdf_doc)):
+                    page = pdf_doc.load_page(page_index)
+                    page_text = page.get_text()
+                    if not page_text or not page_text.strip():
+                        # Fallback to OCR for image-only pages
+                        # Reuse existing OCR logic via extract_text on a single-page temporary PDF
+                        # Simpler: render page to image and OCR that image
+                        pix = page.get_pixmap()
+                        img = Image.open(io.BytesIO(pix.tobytes()))
+                        page_text = pytesseract.image_to_string(img)
+
+                    if page_index == 0:
+                        # Ensure default style is readable
+                        style = docx.styles['Normal']
+                        style.font.name = 'Calibri'
+                        style.font.size = Pt(11)
+
+                    for line in page_text.splitlines():
+                        docx.add_paragraph(line)
+
+                    if page_index != len(pdf_doc) - 1:
+                        docx.add_page_break()
+
+            # Ensure parent directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            docx.save(output_path)
+            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                raise Exception("DOCX output not created or empty")
+            return output_path
+        except Exception as e:
+            raise Exception(f"Error converting PDF to DOCX: {str(e)}")

@@ -8,6 +8,7 @@ from pdf_saas_app.app.core.pdf_operations import PDFProcessor
 from pdf_saas_app.app.db.models import Document
 from pdf_saas_app.app.services.storage_service import StorageService
 from datetime import datetime
+from tempfile import NamedTemporaryFile
 
 router = APIRouter(prefix="/pdfs", tags=["PDFs"])
 
@@ -161,3 +162,65 @@ def reorder_pages(pdf_id: str, new_order: str = Form(...), db: Session = Depends
     PDFProcessor().reorder_pages(file_path, output_path, new_order_list)
     new_doc = _create_new_document_from_file(db, doc, output_path, suffix=" (reordered)")
     return {"detail": "Reorder pages complete", "new_document_id": new_doc.id, "download_url": new_doc.file_path} 
+
+@router.post("/{pdf_id}/to_word")
+def convert_pdf_to_word(pdf_id: str, db: Session = Depends(get_db)):
+    """
+    Convert a stored PDF to a Word DOCX file and store it via StorageService.
+    Returns the new Document metadata and download URL.
+    """
+    # Fetch original document
+    doc = db.query(Document).filter(Document.id == pdf_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="PDF not found")
+
+    # Get local path to the PDF from storage
+    try:
+        file_path = storage_service.get_file(doc.file_path)
+    except Exception:
+        raise HTTPException(status_code=404, detail="PDF not found")
+
+    # Prepare temporary output DOCX path
+    with NamedTemporaryFile(suffix=".docx", delete=False) as tmp_out:
+        output_path = tmp_out.name
+
+    try:
+        # Convert
+        PDFProcessor().pdf_to_docx(file_path, output_path)
+
+        # Upload converted file
+        new_filename = f"{os.path.splitext(doc.filename)[0]}.docx"
+        new_file_url = storage_service.upload_file(output_path, new_filename)
+
+        # Create new Document record for the DOCX
+        new_doc = Document(
+            filename=new_filename,
+            original_filename=doc.original_filename,
+            file_path=new_file_url,
+            file_size=os.path.getsize(output_path),
+            mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            file_type="docx",
+            conversion_type="pdf_to_word",
+            created_at=datetime.utcnow(),
+            last_accessed=datetime.utcnow(),
+            file_hash=None,
+            owner_id=doc.owner_id
+        )
+        db.add(new_doc)
+        db.commit()
+        db.refresh(new_doc)
+
+        return {
+            "detail": "Conversion to DOCX complete",
+            "new_document_id": new_doc.id,
+            "download_url": new_doc.file_path
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up temp file
+        try:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        except Exception:
+            pass

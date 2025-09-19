@@ -1318,3 +1318,401 @@ async def get_document_preview(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate preview"
         )
+
+
+# PDF Editing Endpoints
+@router.post("/{document_id}/edit-text", response_model=DocumentOperationResponse)
+async def edit_text(
+    document_id: str,
+    page_number: int = Form(...),
+    old_text: str = Form(...),
+    new_text: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Edit text on a specific page of a PDF document.
+    """
+    try:
+        storage_service = StorageService()
+        
+        # Get the document
+        document = db.query(Document).filter(
+            Document.id == document_id,
+            Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Get the file path
+        file_path = storage_service.get_file(document.file_path)
+        
+        # Create output path
+        output_filename = f"{document.filename}_edited_{int(time.time())}.pdf"
+        output_path = os.path.join(tempfile.gettempdir(), output_filename)
+        
+        # Edit the text
+        PDFProcessor().edit_text_on_page(file_path, output_path, page_number, old_text, new_text)
+        
+        # Upload the edited file
+        new_file_url = storage_service.upload_file(output_path, output_filename)
+        
+        # Create new document record
+        new_document = Document(
+            filename=output_filename,
+            original_filename=document.original_filename,
+            file_path=new_file_url,
+            file_size=os.path.getsize(output_path),
+            mime_type=document.mime_type,
+            file_type=document.file_type,
+            conversion_type="text_edit",
+            created_at=datetime.utcnow(),
+            last_accessed=datetime.utcnow(),
+            file_hash=None,
+            owner_id=current_user.id
+        )
+        
+        db.add(new_document)
+        db.commit()
+        db.refresh(new_document)
+        
+        # Clean up temp file
+        os.unlink(output_path)
+        
+        return DocumentOperationResponse(
+            success=True,
+            message="Text edited successfully",
+            new_document_id=new_document.id,
+            download_url=f"/api/v1/documents/{new_document.id}/download"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error editing text: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to edit text: {str(e)}"
+        )
+
+
+@router.post("/{document_id}/add-text", response_model=DocumentOperationResponse)
+async def add_text(
+    document_id: str,
+    page_number: int = Form(...),
+    text: str = Form(...),
+    x: float = Form(...),
+    y: float = Form(...),
+    font_size: int = Form(12),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Add text to a specific position on a page of a PDF document.
+    """
+    try:
+        # Get the document
+        document = db.query(Document).filter(
+            Document.id == document_id,
+            Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Get the file path
+        file_path = storage_service.get_file(document.file_path)
+        
+        # Create output path
+        output_filename = f"{document.filename}_added_text_{int(time.time())}.pdf"
+        output_path = os.path.join(tempfile.gettempdir(), output_filename)
+        
+        # Add the text
+        PDFProcessor().add_text_to_page(file_path, output_path, page_number, text, (x, y), font_size)
+        
+        # Upload the edited file
+        new_file_url = storage_service.upload_file(output_path, output_filename)
+        
+        # Create new document record
+        new_document = Document(
+            filename=output_filename,
+            original_filename=document.original_filename,
+            file_path=new_file_url,
+            file_size=os.path.getsize(output_path),
+            mime_type=document.mime_type,
+            file_type=document.file_type,
+            conversion_type="add_text",
+            created_at=datetime.utcnow(),
+            last_accessed=datetime.utcnow(),
+            file_hash=None,
+            owner_id=current_user.id
+        )
+        
+        db.add(new_document)
+        db.commit()
+        db.refresh(new_document)
+        
+        # Clean up temp file
+        os.unlink(output_path)
+        
+        return DocumentOperationResponse(
+            success=True,
+            message="Text added successfully",
+            new_document_id=new_document.id,
+            download_url=f"/api/v1/documents/{new_document.id}/download"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error adding text: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add text: {str(e)}"
+        )
+
+
+@router.post("/{document_id}/remove-images", response_model=DocumentOperationResponse)
+async def remove_images(
+    document_id: str,
+    page_number: int = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Remove all images from a specific page of a PDF document.
+    """
+    try:
+        # Get the document
+        document = db.query(Document).filter(
+            Document.id == document_id,
+            Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Get the file path
+        file_path = storage_service.get_file(document.file_path)
+        
+        # Create output path
+        output_filename = f"{document.filename}_no_images_{int(time.time())}.pdf"
+        output_path = os.path.join(tempfile.gettempdir(), output_filename)
+        
+        # Remove images
+        PDFProcessor().remove_images_from_page(file_path, output_path, page_number)
+        
+        # Upload the edited file
+        new_file_url = storage_service.upload_file(output_path, output_filename)
+        
+        # Create new document record
+        new_document = Document(
+            filename=output_filename,
+            original_filename=document.original_filename,
+            file_path=new_file_url,
+            file_size=os.path.getsize(output_path),
+            mime_type=document.mime_type,
+            file_type=document.file_type,
+            conversion_type="remove_images",
+            created_at=datetime.utcnow(),
+            last_accessed=datetime.utcnow(),
+            file_hash=None,
+            owner_id=current_user.id
+        )
+        
+        db.add(new_document)
+        db.commit()
+        db.refresh(new_document)
+        
+        # Clean up temp file
+        os.unlink(output_path)
+        
+        return DocumentOperationResponse(
+            success=True,
+            message="Images removed successfully",
+            new_document_id=new_document.id,
+            download_url=f"/api/v1/documents/{new_document.id}/download"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error removing images: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove images: {str(e)}"
+        )
+
+
+@router.post("/{document_id}/annotate", response_model=DocumentOperationResponse)
+async def annotate(
+    document_id: str,
+    page_number: int = Form(...),
+    annotation_type: str = Form(...),
+    data: str = Form(...),  # JSON string
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Add annotations (highlight, comment, draw) to a page of a PDF document.
+    """
+    try:
+        import json
+        
+        # Get the document
+        document = db.query(Document).filter(
+            Document.id == document_id,
+            Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Parse annotation data
+        try:
+            annotation_data = json.loads(data)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid annotation data format"
+            )
+        
+        # Get the file path
+        file_path = storage_service.get_file(document.file_path)
+        
+        # Create output path
+        output_filename = f"{document.filename}_annotated_{int(time.time())}.pdf"
+        output_path = os.path.join(tempfile.gettempdir(), output_filename)
+        
+        # Add annotation
+        PDFProcessor().annotate_page(file_path, output_path, page_number, annotation_type, annotation_data)
+        
+        # Upload the edited file
+        new_file_url = storage_service.upload_file(output_path, output_filename)
+        
+        # Create new document record
+        new_document = Document(
+            filename=output_filename,
+            original_filename=document.original_filename,
+            file_path=new_file_url,
+            file_size=os.path.getsize(output_path),
+            mime_type=document.mime_type,
+            file_type=document.file_type,
+            conversion_type="annotate",
+            created_at=datetime.utcnow(),
+            last_accessed=datetime.utcnow(),
+            file_hash=None,
+            owner_id=current_user.id
+        )
+        
+        db.add(new_document)
+        db.commit()
+        db.refresh(new_document)
+        
+        # Clean up temp file
+        os.unlink(output_path)
+        
+        return DocumentOperationResponse(
+            success=True,
+            message="Annotation added successfully",
+            new_document_id=new_document.id,
+            download_url=f"/api/v1/documents/{new_document.id}/download"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error adding annotation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add annotation: {str(e)}"
+        )
+
+
+@router.post("/{document_id}/reorder-pages", response_model=DocumentOperationResponse)
+async def reorder_pages(
+    document_id: str,
+    new_order: str = Form(...),  # JSON string
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Reorder pages of a PDF document.
+    """
+    try:
+        import json
+        
+        # Get the document
+        document = db.query(Document).filter(
+            Document.id == document_id,
+            Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Parse new_order JSON string
+        try:
+            new_order_list = json.loads(new_order)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid page order format"
+            )
+        
+        # Get the file path
+        file_path = storage_service.get_file(document.file_path)
+        
+        # Create output path
+        output_filename = f"{document.filename}_reordered_{int(time.time())}.pdf"
+        output_path = os.path.join(tempfile.gettempdir(), output_filename)
+        
+        # Reorder pages
+        PDFProcessor().reorder_pages(file_path, output_path, new_order_list)
+        
+        # Upload the edited file
+        new_file_url = storage_service.upload_file(output_path, output_filename)
+        
+        # Create new document record
+        new_document = Document(
+            filename=output_filename,
+            original_filename=document.original_filename,
+            file_path=new_file_url,
+            file_size=os.path.getsize(output_path),
+            mime_type=document.mime_type,
+            file_type=document.file_type,
+            conversion_type="reorder_pages",
+            created_at=datetime.utcnow(),
+            last_accessed=datetime.utcnow(),
+            file_hash=None,
+            owner_id=current_user.id
+        )
+        
+        db.add(new_document)
+        db.commit()
+        db.refresh(new_document)
+        
+        # Clean up temp file
+        os.unlink(output_path)
+        
+        return DocumentOperationResponse(
+            success=True,
+            message="Pages reordered successfully",
+            new_document_id=new_document.id,
+            download_url=f"/api/v1/documents/{new_document.id}/download"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error reordering pages: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reorder pages: {str(e)}"
+        )

@@ -307,7 +307,7 @@
                         <small class="text-muted">Don't have an account? <a href="#" id="showRegisterLink">Register here</a></small>
                     </div>
                     <div class="mb-3 text-center">
-                        <a href="http://localhost:8000/api/v1/auth/login/google" class="btn btn-light w-100" style="border:1px solid #ccc; box-shadow:0 2px 4px rgba(0,0,0,0.04); font-weight:600;">
+                        <a href="https://redanpdf-kz99.onrender.com/api/v1/auth/login/google" class="btn btn-light w-100" style="border:1px solid #ccc; box-shadow:0 2px 4px rgba(0,0,0,0.04); font-weight:600;">
                             <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" style="width:20px; margin-right:8px; vertical-align:middle;"> Sign in with Google
                         </a>
                         <div class="my-2 text-muted" style="font-size:0.9em;">or</div>
@@ -456,6 +456,9 @@
                         <div class="col-md-3 mb-2">
                             <button type="button" class="btn btn-custom w-100" id="btnToJpg"><i class="fas fa-image me-2"></i>PDF to JPG</button>
                         </div>
+                        <div class="col-md-3 mb-2">
+                            <button type="button" class="btn btn-custom w-100" id="btnToWord"><i class="fas fa-file-word me-2"></i>PDF to Word</button>
+                        </div>
                     </div>
                     <!-- Office to PDF Conversions -->
                     <div class="row mt-3">
@@ -500,6 +503,145 @@
                         <div class="response-container">
                             <div class="error-message" id="apiError"></div>
                             <pre id="responseOutput" class="pre-wrap"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PDF Editing Features UI -->
+                <div class="feature-card">
+                    <h4><i class="fas fa-edit me-2"></i>PDF Editing Features</h4>
+                    <p class="text-muted mb-4">Edit text, add annotations, remove images, and reorder pages in your PDF documents.</p>
+                    
+                    <!-- Edit Text Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-font me-2"></i>Edit Text on Page</h6>
+                                    <div class="mb-2">
+                                        <label for="editTextPage" class="form-label">Page Number (0-based)</label>
+                                        <input type="number" class="form-control" id="editTextPage" placeholder="0" min="0">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="editTextOld" class="form-label">Text to Replace</label>
+                                        <input type="text" class="form-control" id="editTextOld" placeholder="Enter text to find and replace">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="editTextNew" class="form-label">New Text</label>
+                                        <input type="text" class="form-control" id="editTextNew" placeholder="Enter replacement text">
+                                    </div>
+                                    <button type="button" class="btn btn-custom w-100" id="btnEditText">
+                                        <i class="fas fa-edit me-2"></i>Edit Text
+                                    </button>
+                                    <div class="mt-2" id="editTextResponse" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Add Text Section -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-plus me-2"></i>Add Text to Page</h6>
+                                    <div class="mb-2">
+                                        <label for="addTextPage" class="form-label">Page Number (0-based)</label>
+                                        <input type="number" class="form-control" id="addTextPage" placeholder="0" min="0">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="addTextContent" class="form-label">Text to Add</label>
+                                        <input type="text" class="form-control" id="addTextContent" placeholder="Enter text to add">
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <label for="addTextX" class="form-label">X Position</label>
+                                            <input type="number" class="form-control" id="addTextX" placeholder="100" min="0">
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="addTextY" class="form-label">Y Position</label>
+                                            <input type="number" class="form-control" id="addTextY" placeholder="100" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="addTextFontSize" class="form-label">Font Size</label>
+                                        <input type="number" class="form-control" id="addTextFontSize" placeholder="12" min="8" max="72">
+                                    </div>
+                                    <button type="button" class="btn btn-custom w-100" id="btnAddText">
+                                        <i class="fas fa-plus me-2"></i>Add Text
+                                    </button>
+                                    <div class="mt-2" id="addTextResponse" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Remove Images and Annotate Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-image me-2"></i>Remove Images from Page</h6>
+                                    <div class="mb-2">
+                                        <label for="removeImagesPage" class="form-label">Page Number (0-based)</label>
+                                        <input type="number" class="form-control" id="removeImagesPage" placeholder="0" min="0">
+                                    </div>
+                                    <button type="button" class="btn btn-custom w-100" id="btnRemoveImages">
+                                        <i class="fas fa-trash me-2"></i>Remove Images
+                                    </button>
+                                    <div class="mt-2" id="removeImagesResponse" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Annotate Section -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-highlighter me-2"></i>Add Annotation</h6>
+                                    <div class="mb-2">
+                                        <label for="annotatePage" class="form-label">Page Number (0-based)</label>
+                                        <input type="number" class="form-control" id="annotatePage" placeholder="0" min="0">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="annotateType" class="form-label">Annotation Type</label>
+                                        <select class="form-control" id="annotateType">
+                                            <option value="highlight">Highlight</option>
+                                            <option value="comment">Comment</option>
+                                            <option value="draw">Draw</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="annotateData" class="form-label">Annotation Data (JSON)</label>
+                                        <textarea class="form-control" id="annotateData" rows="3" placeholder='{"text": "Comment text", "position": [100, 100]}'></textarea>
+                                        <small class="text-muted">For highlight: {"rects": [[100, 100, 200, 120]]}<br>
+                                        For comment: {"text": "Comment", "position": [100, 100]}<br>
+                                        For draw: {"points": [[100, 100], [200, 200]]}</small>
+                                    </div>
+                                    <button type="button" class="btn btn-custom w-100" id="btnAnnotate">
+                                        <i class="fas fa-highlighter me-2"></i>Add Annotation
+                                    </button>
+                                    <div class="mt-2" id="annotateResponse" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reorder Pages Section -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-sort me-2"></i>Reorder Pages</h6>
+                                    <div class="mb-2">
+                                        <label for="reorderPagesOrder" class="form-label">New Page Order (comma-separated)</label>
+                                        <input type="text" class="form-control" id="reorderPagesOrder" placeholder="2,0,1" pattern="[0-9,\s]+">
+                                        <small class="text-muted">Enter page indices in desired order (0-based). Example: 2,0,1 to put page 3 first, then page 1, then page 2.</small>
+                                    </div>
+                                    <button type="button" class="btn btn-custom w-100" id="btnReorderPages">
+                                        <i class="fas fa-sort me-2"></i>Reorder Pages
+                                    </button>
+                                    <div class="mt-2" id="reorderPagesResponse" style="display: none;"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -667,7 +809,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         // Constants
-        const API_BASE_URL = 'http://localhost:8000/api/v1';
+        const API_BASE_URL = 'https://redanpdf-kz99.onrender.com/api/v1';
         let jwtToken = null;
         let currentUser = null;
         let uploadedFile = null;
@@ -1255,6 +1397,20 @@
             }
         });
 
+        // PDF to Word (DOCX)
+        document.getElementById('btnToWord').addEventListener('click', async function() {
+            const docId = document.getElementById('documentList').value;
+            if (!docId) return;
+            setFeatureLoading('advancedFeatureResponse', true);
+            try {
+                const result = await callAPI(`/pdfs/${docId}/to_word`, null, 'POST');
+                setFeatureResponse('advancedFeatureResponse', 'DOCX file ready for download.', { id: result.new_document_id, filename: `${Date.now()}.docx`, download_url: result.download_url });
+                loadDocumentList();
+            } catch (err) {
+                setFeatureResponse('advancedFeatureResponse', err.message);
+            }
+        });
+
         // Office to PDF Conversion Handlers
         document.getElementById('btnWordToPdf').addEventListener('click', async function() {
             const file = document.getElementById('wordToPdfInput').files[0];
@@ -1492,7 +1648,11 @@
           const newText = document.getElementById('editTextNew').value;
           if (!docId) return alert('Select a document');
           try {
-            const result = await callAPI(`/pdfs/${docId}/edit_text?` + new URLSearchParams({page_number: page, old_text: oldText, new_text: newText}), null, 'POST');
+            const formData = new FormData();
+            formData.append('page_number', page);
+            formData.append('old_text', oldText);
+            formData.append('new_text', newText);
+            const result = await callAPI(`/documents/${docId}/edit-text`, formData, 'POST');
             document.getElementById('editTextResponse').textContent = JSON.stringify(result, null, 2);
           } catch (e) { document.getElementById('editTextResponse').textContent = e.message; }
         };
@@ -1505,7 +1665,13 @@
           const fontSize = document.getElementById('addTextFontSize').value || 12;
           if (!docId) return alert('Select a document');
           try {
-            const result = await callAPI(`/pdfs/${docId}/add_text?` + new URLSearchParams({page_number: page, text, x, y, font_size: fontSize}), null, 'POST');
+            const formData = new FormData();
+            formData.append('page_number', page);
+            formData.append('text', text);
+            formData.append('x', x);
+            formData.append('y', y);
+            formData.append('font_size', fontSize);
+            const result = await callAPI(`/documents/${docId}/add-text`, formData, 'POST');
             document.getElementById('addTextResponse').textContent = JSON.stringify(result, null, 2);
           } catch (e) { document.getElementById('addTextResponse').textContent = e.message; }
         };
@@ -1528,7 +1694,9 @@
           const page = document.getElementById('removeImagesPage').value;
           if (!docId) return alert('Select a document');
           try {
-            const result = await callAPI(`/pdfs/${docId}/remove_images?` + new URLSearchParams({page_number: page}), null, 'POST');
+            const formData = new FormData();
+            formData.append('page_number', page);
+            const result = await callAPI(`/documents/${docId}/remove-images`, formData, 'POST');
             document.getElementById('removeImagesResponse').textContent = JSON.stringify(result, null, 2);
           } catch (e) { document.getElementById('removeImagesResponse').textContent = e.message; }
         };
@@ -1539,7 +1707,11 @@
           const data = document.getElementById('annotateData').value;
           if (!docId) return alert('Select a document');
           try {
-            const result = await callAPI(`/pdfs/${docId}/annotate?` + new URLSearchParams({page_number: page, annotation_type: type, data}), null, 'POST');
+            const formData = new FormData();
+            formData.append('page_number', page);
+            formData.append('annotation_type', type);
+            formData.append('data', data);
+            const result = await callAPI(`/documents/${docId}/annotate`, formData, 'POST');
             document.getElementById('annotateResponse').textContent = JSON.stringify(result, null, 2);
           } catch (e) { document.getElementById('annotateResponse').textContent = e.message; }
         };
@@ -1548,7 +1720,10 @@
           const order = document.getElementById('reorderPagesOrder').value;
           if (!docId) return alert('Select a document');
           try {
-            const result = await callAPI(`/pdfs/${docId}/reorder_pages`, {new_order: order.split(',').map(x => parseInt(x.trim()))}, 'POST');
+            const formData = new FormData();
+            const orderArray = order.split(',').map(x => parseInt(x.trim()));
+            formData.append('new_order', JSON.stringify(orderArray));
+            const result = await callAPI(`/documents/${docId}/reorder-pages`, formData, 'POST');
             document.getElementById('reorderPagesResponse').textContent = JSON.stringify(result, null, 2);
           } catch (e) { document.getElementById('reorderPagesResponse').textContent = e.message; }
         };
