@@ -10,7 +10,7 @@ from pdf_saas_app.app.services.storage_service import StorageService
 from datetime import datetime
 from tempfile import NamedTemporaryFile
 
-router = APIRouter(prefix="/pdfs", tags=["PDFs"])
+router = APIRouter(tags=["PDFs"])
 
 storage_service = StorageService()
 

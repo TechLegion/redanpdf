@@ -70,7 +70,7 @@ app.include_router(
 
 app.include_router(
     pdf.router,
-    prefix=f"{settings.API_V1_STR}",
+    prefix=f"{settings.API_V1_STR}/pdfs",
     tags=["pdf-edit"]
 )
 
