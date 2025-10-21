@@ -1,6 +1,6 @@
 import openai
 from langchain_community.llms import OpenAI as LangchainOpenAI
-from langchain.chains.summarization import load_summarize_chain
+from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from typing import List, Optional, Dict, Any
