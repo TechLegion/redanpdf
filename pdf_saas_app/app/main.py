@@ -2,8 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
-from pdf_saas_app.app.api import auth, documents, auth_google, pdf
-# from pdf_saas_app.app.api import ai_chat  # Temporarily disabled due to LangChain import issues
+from pdf_saas_app.app.api import auth, documents, ai_chat, auth_google, pdf
 from pdf_saas_app.app.db.session import engine, Base
 from pdf_saas_app.app.config import settings
 from pdf_saas_app.app.services.redis_service import redis_service
@@ -56,12 +55,11 @@ app.include_router(
     tags=["documents"]
 )
 
-# Temporarily disabled due to LangChain import issues
-# app.include_router(
-#     ai_chat.router,
-#     prefix=f"{settings.API_V1_STR}/ai",
-#     tags=["ai"]
-# )
+app.include_router(
+    ai_chat.router,
+    prefix=f"{settings.API_V1_STR}/ai",
+    tags=["ai"]
+)
 
 # Include Google auth router with a different prefix
 app.include_router(

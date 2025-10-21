@@ -1,7 +1,5 @@
 import openai
-from langchain_community.llms import OpenAI as LangchainOpenAI
-from langchain.chains.summarize import load_summarize_chain
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from typing import List, Optional, Dict, Any
 import json
@@ -49,7 +47,7 @@ class AIService:
     
     def summarize_document(self, text_content: str, max_length: int = 1000) -> str:
         """
-        Summarize document content using LangChain
+        Summarize document content using direct OpenAI API with chunking
         
         Args:
             text_content: The text content to summarize
@@ -64,19 +62,60 @@ class AIService:
             chunk_overlap=100
         )
         texts = text_splitter.split_text(text_content)
-        docs = [Document(page_content=t) for t in texts]
         
-        # Use LangChain for summarization
-        llm = LangchainOpenAI(temperature=0, openai_api_key=settings.OPENAI_API_KEY)
-        chain = load_summarize_chain(llm, chain_type="map_reduce")
-        summary = chain.run(docs)
+        # If we have multiple chunks, summarize each chunk first
+        if len(texts) > 1:
+            chunk_summaries = []
+            for chunk in texts:
+                chunk_summary = self._summarize_chunk(chunk, max_length // len(texts))
+                chunk_summaries.append(chunk_summary)
+            
+            # Combine chunk summaries and summarize again
+            combined_text = " ".join(chunk_summaries)
+            final_summary = self._summarize_chunk(combined_text, max_length)
+        else:
+            # Single chunk, summarize directly
+            final_summary = self._summarize_chunk(texts[0], max_length)
         
-        # If the summary is too long, make a final summarization pass
-        if len(summary) > max_length:
-            summary_doc = [Document(page_content=summary)]
-            summary = chain.run(summary_doc)
+        return final_summary
+    
+    def _summarize_chunk(self, text: str, max_length: int) -> str:
+        """Helper method to summarize a single chunk of text"""
+        # Truncate text if it's too long for the API
+        if len(text) > 12000:  # Leave room for prompt
+            text = text[:12000]
         
-        return summary
+        prompt = f"""
+        Please summarize the following text in a clear and concise manner. 
+        The summary should be no more than {max_length} characters.
+        
+        Text to summarize:
+        {text}
+        
+        Summary:
+        """
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that creates clear and concise summaries."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.3
+            )
+            
+            summary = response.choices[0].message.content.strip()
+            
+            # If summary is still too long, truncate it
+            if len(summary) > max_length:
+                summary = summary[:max_length] + "..."
+            
+            return summary
+            
+        except Exception as e:
+            return f"Error generating summary: {str(e)}"
     
     def check_grammar(self, text: str) -> Dict[str, Any]:
         """
