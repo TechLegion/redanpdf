@@ -10,16 +10,27 @@ from pdf_saas_app.app.config import settings
 from pdf_saas_app.app.db.models import User
 from pdf_saas_app.app.db.session import get_db
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - using argon2 as primary with bcrypt fallback
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        # For bcrypt, truncate password to 72 bytes to avoid limitation
+        if hashed_password.startswith('$2b$') or hashed_password.startswith('$2a$'):
+            truncated_password = plain_password[:72]
+            return pwd_context.verify(truncated_password, hashed_password)
+        else:
+            # For argon2 and other schemes, use full password
+            return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        # Fallback: try with truncated password for bcrypt compatibility
+        truncated_password = plain_password[:72]
+        return pwd_context.verify(truncated_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """Generate password hash"""
+    """Generate password hash using argon2 (no length limitation)"""
     return pwd_context.hash(password)
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
