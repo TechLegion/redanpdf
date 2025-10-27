@@ -19,7 +19,10 @@ services:
       - key: AZURE_STORAGE_CONNECTION_STRING
         sync: false
       - key: REDIS_URL
-        sync: false
+        fromService:
+          type: redis
+          name: pdf-saas-redis
+          property: connectionString
 
   - type: redis
     name: pdf-saas-redis

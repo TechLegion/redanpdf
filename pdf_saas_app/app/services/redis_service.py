@@ -19,16 +19,13 @@ class RedisService:
         """Connect to Redis"""
         try:
             if hasattr(settings, 'REDIS_URL') and settings.REDIS_URL:
+                logger.info(f"Connecting to Redis using URL: {settings.REDIS_URL[:20]}...")
                 self.redis_client = redis.from_url(settings.REDIS_URL)
             else:
-                # Default local Redis connection
-                self.redis_client = redis.Redis(
-                    host=getattr(settings, 'REDIS_HOST', 'localhost'),
-                    port=getattr(settings, 'REDIS_PORT', 6379),
-                    db=getattr(settings, 'REDIS_DB', 0),
-                    password=getattr(settings, 'REDIS_PASSWORD', None),
-                    decode_responses=True
-                )
+                logger.warning("No REDIS_URL provided, Redis will be disabled")
+                self.is_connected = False
+                self.redis_client = None
+                return
             
             # Test connection
             self.redis_client.ping()

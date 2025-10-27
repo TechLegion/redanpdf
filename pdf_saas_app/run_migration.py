@@ -16,12 +16,16 @@ def run_migration():
         # Set up environment
         os.environ['PYTHONPATH'] = '/app/pdf_saas_app'
         
+        # Change to the correct directory
+        os.chdir('/app/pdf_saas_app')
+        
         # Run alembic migration
         result = subprocess.run(
             ['alembic', 'upgrade', 'head'],
             cwd='/app/pdf_saas_app',
             capture_output=True,
-            text=True
+            text=True,
+            env=os.environ.copy()
         )
         
         if result.returncode == 0:
@@ -30,6 +34,7 @@ def run_migration():
         else:
             print(f"❌ Migration failed with return code: {result.returncode}")
             print(f"Error output: {result.stderr}")
+            print(f"Standard output: {result.stdout}")
             return False
             
     except Exception as e:

@@ -3,8 +3,11 @@ import sys
 import os
 
 # Add the app directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+app_dir = os.path.dirname(current_dir)
+sys.path.insert(0, app_dir)
 
+# Import the Base from models
 from app.db.models import Base
 
 from sqlalchemy import engine_from_config

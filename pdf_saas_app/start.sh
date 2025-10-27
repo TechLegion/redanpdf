@@ -14,8 +14,8 @@ cd /app/pdf_saas_app
 export PYTHONPATH="/app/pdf_saas_app:$PYTHONPATH"
 
 echo "📊 Running database migrations..."
-# Skip migration for now to get app running
-python skip_migration.py
+# Run migration using Python script
+python run_migration.py
 
 echo "🌐 Starting FastAPI application..."
 # Start the application
