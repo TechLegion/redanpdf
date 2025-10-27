@@ -5,16 +5,16 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from jose import jwt, JWTError
 
-from pdf_saas_app.app.db.session import get_db
-from pdf_saas_app.app.db.models import User
-from pdf_saas_app.app.services.auth_services import (
+from app.db.session import get_db
+from app.db.models import User
+from app.services.auth_services import (
     authenticate_user,
     create_access_token,
     create_refresh_token,
     get_password_hash,
     get_current_active_user
 )
-from pdf_saas_app.app.config import settings
+from app.config import settings
 
 router = APIRouter()
 

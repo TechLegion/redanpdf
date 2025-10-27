@@ -4,8 +4,8 @@ from langchain_core.documents import Document
 from typing import List, Optional, Dict, Any
 import json
 
-from pdf_saas_app.app.config import settings
-from pdf_saas_app.app.core.pdf_operations import PDFProcessor
+from app.config import settings
+from app.core.pdf_operations import PDFProcessor
 
 class AIService:
     """Service for AI operations including chat, summarization, and grammar checking"""

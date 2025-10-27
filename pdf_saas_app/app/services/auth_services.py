@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from pdf_saas_app.app.config import settings
-from pdf_saas_app.app.db.models import User
-from pdf_saas_app.app.db.session import get_db
+from app.config import settings
+from app.db.models import User
+from app.db.session import get_db
 
 # Password hashing - using argon2 as primary with bcrypt fallback
 pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")

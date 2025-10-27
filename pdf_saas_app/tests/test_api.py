@@ -1,7 +1,7 @@
 # Tests for API endpoints will be implemented here. 
 
 from fastapi.testclient import TestClient
-from pdf_saas_app.app.main import app
+from app.main import app
 
 client = TestClient(app)
 

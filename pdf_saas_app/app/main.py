@@ -2,10 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
-from pdf_saas_app.app.api import auth, documents, ai_chat, auth_google, pdf
-from pdf_saas_app.app.db.session import engine, Base
-from pdf_saas_app.app.config import settings
-from pdf_saas_app.app.services.redis_service import redis_service
+from app.api import auth, documents, ai_chat, auth_google, pdf
+from app.db.session import engine, Base
+from app.config import settings
+from app.services.redis_service import redis_service
 from starlette.middleware.sessions import SessionMiddleware
 
 # Create database tables if they don't exist
@@ -110,7 +110,7 @@ async def health_check():
 @app.get("/cache/stats")
 async def get_cache_stats():
     """Get cache statistics"""
-    from pdf_saas_app.app.utils.cache import CacheManager
+    from app.utils.cache import CacheManager
     return CacheManager.get_cache_stats()
 
 @app.get("/cache/clear")
@@ -125,4 +125,4 @@ async def clear_cache():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("pdf_saas_app.app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,12 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response, Form
 from sqlalchemy.orm import Session
-from pdf_saas_app.app.db.session import get_db
-from pdf_saas_app.app.services import pdf_services
+from app.db.session import get_db
+from app.services import pdf_services
 import shutil
 import os
-from pdf_saas_app.app.core.pdf_operations import PDFProcessor
-from pdf_saas_app.app.db.models import Document
-from pdf_saas_app.app.services.storage_service import StorageService
+from app.core.pdf_operations import PDFProcessor
+from app.db.models import Document
+from app.services.storage_service import StorageService
 from datetime import datetime
 from tempfile import NamedTemporaryFile
 

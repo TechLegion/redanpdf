@@ -2,7 +2,7 @@ import redis
 import json
 import time
 from typing import Optional, Any, Dict, List
-from pdf_saas_app.app.config import settings
+from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)

@@ -18,12 +18,12 @@ import fitz  # PyMuPDF
 import hashlib
 import mimetypes
 
-from pdf_saas_app.app.db.session import get_db
-from pdf_saas_app.app.db.models import User, Document
-from pdf_saas_app.app.services.auth_services import get_current_active_user
-from pdf_saas_app.app.services.storage_service import StorageService
-from pdf_saas_app.app.core.pdf_operations import PDFProcessor
-from pdf_saas_app.app.utils.cache import cache_response, invalidate_cache, CacheManager
+from app.db.session import get_db
+from app.db.models import User, Document
+from app.services.auth_services import get_current_active_user
+from app.services.storage_service import StorageService
+from app.core.pdf_operations import PDFProcessor
+from app.utils.cache import cache_response, invalidate_cache, CacheManager
 
 def validate_file_type(file: UploadFile, allowed_extensions: List[str], allowed_mime_types: List[str]) -> None:
     """

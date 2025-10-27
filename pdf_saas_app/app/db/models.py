@@ -5,9 +5,9 @@ import uuid
 from typing import Optional
 import logging
 
-from pdf_saas_app.app.db.session import Base
-from pdf_saas_app.app.core.pdf_operations import PDFProcessor
-from pdf_saas_app.app.services.storage_service import StorageService
+from app.db.session import Base
+from app.core.pdf_operations import PDFProcessor
+from app.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 

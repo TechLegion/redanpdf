@@ -2,8 +2,8 @@ import functools
 import hashlib
 import json
 from typing import Optional, Any, Callable
-from pdf_saas_app.app.services.redis_service import redis_service
-from pdf_saas_app.app.config import settings
+from app.services.redis_service import redis_service
+from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
