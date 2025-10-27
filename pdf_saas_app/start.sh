@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Startup script for Render deployment
-# This script runs database migrations and starts the application
+# Startup script for Docker container
+# This script runs database migrations and starts the FastAPI application
 
 set -e  # Exit on any error
 
 echo "🚀 Starting PDF SaaS Application..."
 
 # Change to the app directory
-cd pdf_saas_app
+cd /app/pdf_saas_app
 
 echo "📊 Running database migrations..."
 # Run Alembic migrations
@@ -18,4 +18,4 @@ echo "✅ Database migrations completed successfully!"
 
 echo "🌐 Starting FastAPI application..."
 # Start the application
-exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 120 --limit-concurrency 1000

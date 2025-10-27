@@ -1,12 +1,8 @@
 services:
   - type: web
     name: pdf-saas-app
-    env: python
-    buildCommand: |
-      apt-get update
-      apt-get install -y --no-install-recommends curl tesseract-ocr poppler-utils libreoffice libgl1-mesa-glx libglib2.0-0 libxrender1 libsm6 libxext6 python3-pip python3-venv
-      pip install -r requirements.txt
-    startCommand: python migrate_and_start.py
+    env: docker
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

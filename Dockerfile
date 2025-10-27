@@ -44,6 +44,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy the rest of the app
 COPY . .
 
+# Make the startup script executable
+RUN chmod +x /app/pdf_saas_app/start.sh
+
 # Set proper permissions
 RUN chown -R appuser:appuser /app && \
     chmod -R 755 /app
@@ -63,5 +66,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the app with Uvicorn
-CMD ["uvicorn", "pdf_saas_app.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--timeout-keep-alive", "120", "--limit-concurrency", "1000"] 
+# Start the app with our startup script
+CMD ["/app/pdf_saas_app/start.sh"] 
