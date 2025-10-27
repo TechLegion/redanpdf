@@ -17,25 +17,29 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
     try:
-        # Always truncate password to 72 bytes to avoid bcrypt limitation
-        # This ensures compatibility with both bcrypt and argon2
-        truncated_password = plain_password[:72]
-        
         # Debug logging
-        print(f"Password length: {len(plain_password)}, Truncated length: {len(truncated_password)}")
+        print(f"Password length: {len(plain_password)}")
         print(f"Hash type: {hashed_password[:10]}...")
         
-        return pwd_context.verify(truncated_password, hashed_password)
-    except Exception as e:
-        print(f"Password verification error: {e}")
-        # If verification fails, try with the original password
-        # This handles edge cases where truncation might cause issues
+        # Try with original password first (for argon2 hashes)
         try:
             return pwd_context.verify(plain_password, hashed_password)
-        except Exception as e2:
-            print(f"Fallback verification error: {e2}")
-            # If both fail, return False
-            return False
+        except Exception as e1:
+            print(f"Original password verification failed: {e1}")
+            
+            # If that fails, try with truncated password (for bcrypt hashes)
+            truncated_password = plain_password[:72]
+            print(f"Trying with truncated password (length: {len(truncated_password)})")
+            
+            try:
+                return pwd_context.verify(truncated_password, hashed_password)
+            except Exception as e2:
+                print(f"Truncated password verification failed: {e2}")
+                return False
+                
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 def get_password_hash(password: str) -> str:
     """Generate password hash using argon2 (no length limitation)"""
