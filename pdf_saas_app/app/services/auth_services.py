@@ -17,21 +17,35 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
     try:
-        # For bcrypt, truncate password to 72 bytes to avoid limitation
-        if hashed_password.startswith('$2b$') or hashed_password.startswith('$2a$'):
-            truncated_password = plain_password[:72]
-            return pwd_context.verify(truncated_password, hashed_password)
-        else:
-            # For argon2 and other schemes, use full password
-            return pwd_context.verify(plain_password, hashed_password)
-    except Exception:
-        # Fallback: try with truncated password for bcrypt compatibility
+        # Always truncate password to 72 bytes to avoid bcrypt limitation
+        # This ensures compatibility with both bcrypt and argon2
         truncated_password = plain_password[:72]
+        
+        # Debug logging
+        print(f"Password length: {len(plain_password)}, Truncated length: {len(truncated_password)}")
+        print(f"Hash type: {hashed_password[:10]}...")
+        
         return pwd_context.verify(truncated_password, hashed_password)
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        # If verification fails, try with the original password
+        # This handles edge cases where truncation might cause issues
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception as e2:
+            print(f"Fallback verification error: {e2}")
+            # If both fail, return False
+            return False
 
 def get_password_hash(password: str) -> str:
     """Generate password hash using argon2 (no length limitation)"""
-    return pwd_context.hash(password)
+    try:
+        # Use argon2 for new password hashes (no length limitation)
+        return pwd_context.hash(password)
+    except Exception:
+        # Fallback to bcrypt with truncation if argon2 fails
+        truncated_password = password[:72]
+        return pwd_context.hash(truncated_password)
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     """Authenticate a user by email and password"""
