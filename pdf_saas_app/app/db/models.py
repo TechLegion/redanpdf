@@ -41,6 +41,7 @@ class Document(Base):
     file_hash = Column(String, index=True)  # SHA256 hash of file contents for deduplication
     
     owner_id = Column(String, ForeignKey("users.id"))
+    owner_email = Column(String, index=True)  # Email for resilient file access
     owner = relationship("User", back_populates="documents")
     
     chat_history = relationship("ChatHistory", back_populates="document")

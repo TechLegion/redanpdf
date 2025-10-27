@@ -161,6 +161,7 @@ async def upload_document(
             mime_type=mime_type,
             file_type=file_type,
             owner_id=current_user.id,
+            owner_email=current_user.email,  # Store email for resilience
             file_hash=file_hash
         )
         
@@ -197,9 +198,10 @@ async def list_documents(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    List all documents owned by the current user
+    List all documents owned by the current user (by email)
     """
-    documents = db.query(Document).filter(Document.owner_id == current_user.id).all()
+    # Use email-based filtering for better resilience
+    documents = db.query(Document).filter(Document.owner_email == current_user.email).all()
     
     # Convert Document models to DocumentResponse models
     response_documents = []
@@ -228,9 +230,9 @@ async def get_document(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get document details by ID
+    Get document details by ID (email-based validation)
     """
-    document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
+    document = db.query(Document).filter(Document.id == document_id, Document.owner_email == current_user.email).first()
     
     if not document:
         raise HTTPException(
@@ -263,9 +265,9 @@ async def download_document(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Download a document by ID (authenticated endpoint)
+    Download a document by ID (email-based validation)
     """
-    document = db.query(Document).filter(Document.id == document_id, Document.owner_id == current_user.id).first()
+    document = db.query(Document).filter(Document.id == document_id, Document.owner_email == current_user.email).first()
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

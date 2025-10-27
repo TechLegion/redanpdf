@@ -5,9 +5,8 @@ services:
     buildCommand: |
       apt-get update
       apt-get install -y --no-install-recommends curl tesseract-ocr poppler-utils libreoffice libgl1-mesa-glx libglib2.0-0 libxrender1 libsm6 libxext6 python3-pip python3-venv
-      rm -rf alembic/versions/*.py
       pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: python migrate_and_start.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
