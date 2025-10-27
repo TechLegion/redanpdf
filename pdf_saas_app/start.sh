@@ -10,11 +10,12 @@ echo "🚀 Starting PDF SaaS Application..."
 # Change to the app directory
 cd /app/pdf_saas_app
 
-echo "📊 Running database migrations..."
-# Run Alembic migrations
-alembic upgrade head
+# Add the current directory to Python path
+export PYTHONPATH="/app/pdf_saas_app:$PYTHONPATH"
 
-echo "✅ Database migrations completed successfully!"
+echo "📊 Running database migrations..."
+# Run migration using Python script
+python run_migration.py
 
 echo "🌐 Starting FastAPI application..."
 # Start the application

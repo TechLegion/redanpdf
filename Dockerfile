@@ -44,8 +44,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy the rest of the app
 COPY . .
 
-# Make the startup script executable
-RUN chmod +x /app/pdf_saas_app/start.sh
+# Make the startup script and migration script executable
+RUN chmod +x /app/pdf_saas_app/start.sh && \
+    chmod +x /app/pdf_saas_app/run_migration.py
 
 # Set proper permissions
 RUN chown -R appuser:appuser /app && \
