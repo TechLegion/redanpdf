@@ -19,6 +19,9 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
+# Import settings to use the correct database URL
+from app.config import settings
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
@@ -48,7 +51,15 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    # Use database URL from settings, ensuring it uses psycopg3
+    url = str(settings.SQLALCHEMY_DATABASE_URI)
+    
+    # Ensure we're using psycopg3, not psycopg2
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql+psycopg2://"):
+        url = url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
+    
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -67,8 +78,20 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Get configuration section
+    configuration = config.get_section(config.config_ini_section, {})
+    
+    # Override with database URL from settings, ensuring psycopg3
+    url = str(settings.SQLALCHEMY_DATABASE_URI)
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql+psycopg2://"):
+        url = url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
+    
+    configuration["sqlalchemy.url"] = url
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

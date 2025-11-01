@@ -8,8 +8,14 @@ from app.config import settings
 from app.services.redis_service import redis_service
 from starlette.middleware.sessions import SessionMiddleware
 
-# Create database tables if they don't exist
-Base.metadata.create_all(bind=engine)
+# Create database tables if they don't exist (lazy initialization)
+def init_database():
+    """Initialize database tables on startup"""
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: Database initialization failed: {e}")
+        print("Application will continue, but database operations may fail.")
 
 # Create storage directory if using local storage
 if settings.STORAGE_TYPE == "local":
@@ -41,6 +47,11 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY
 )
+
+# Initialize database on startup
+@app.on_event("startup")
+def startup_event():
+    init_database()
 
 # Include routers
 app.include_router(
