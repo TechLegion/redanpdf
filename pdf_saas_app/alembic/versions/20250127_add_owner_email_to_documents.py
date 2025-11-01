@@ -1,7 +1,7 @@
 """add owner_email to documents
 
 Revision ID: add_owner_email_001
-Revises: 20250703_add_file_hash_to_documents
+Revises: 20250703_add_file_hash
 Create Date: 2025-01-27 08:45:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_owner_email_001'
-down_revision = '20250703_add_file_hash_to_documents'
+down_revision = '20250703_add_file_hash'
 branch_labels = None
 depends_on = None
 
