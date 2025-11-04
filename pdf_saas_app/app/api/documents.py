@@ -354,7 +354,8 @@ async def merge_documents(
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(db_document)
@@ -426,7 +427,8 @@ async def add_watermark(
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(db_document)
@@ -570,7 +572,8 @@ async def compress_pdf(
             file_path=file_path,
             file_size=file_size,
             mime_type="application/pdf",
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(db_document)
@@ -632,7 +635,8 @@ async def image_to_pdf(
         file_path=file_path,
         file_size=file_size,
         mime_type="application/pdf",
-        owner_id=current_user.id
+        owner_id=current_user.id,
+        owner_email=current_user.email  # Store email for resilience
     )
     db.add(db_document)
     db.commit()
@@ -680,7 +684,8 @@ async def pdf_to_epub(
             file_size=os.path.getsize(output_path),
             mime_type="application/epub+zip",
             file_type="epub",
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(epub_doc)
@@ -744,7 +749,8 @@ async def pdf_to_jpg(
                     file_size=os.path.getsize(img_path),
                     mime_type="image/jpeg",
                     file_type="jpg",
-                    owner_id=current_user.id
+                    owner_id=current_user.id,
+                    owner_email=current_user.email  # Store email for resilience
                 )
                 db.add(doc)
                 db.commit()
@@ -887,7 +893,8 @@ async def word_to_pdf(
                     original_filename=file.filename,
                     file_type="pdf",
                     conversion_type="word_to_pdf",
-                    owner_id=current_user.id
+                    owner_id=current_user.id,
+                    owner_email=current_user.email  # Store email for resilience
                 )
                 db.add(doc)
                 db.commit()
@@ -1044,7 +1051,8 @@ async def excel_to_pdf(
                     original_filename=file.filename,
                     file_type="pdf",
                     conversion_type="excel_to_pdf",
-                    owner_id=current_user.id
+                    owner_id=current_user.id,
+                    owner_email=current_user.email  # Store email for resilience
                 )
                 db.add(doc)
                 db.commit()
@@ -1197,7 +1205,8 @@ async def ppt_to_pdf(
                     original_filename=file.filename,
                     file_type="pdf",
                     conversion_type="ppt_to_pdf",
-                    owner_id=current_user.id
+                    owner_id=current_user.id,
+                    owner_email=current_user.email  # Store email for resilience
                 )
                 db.add(doc)
                 db.commit()
@@ -1375,7 +1384,8 @@ async def edit_text(
             created_at=datetime.utcnow(),
             last_accessed=datetime.utcnow(),
             file_hash=None,
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(new_document)
@@ -1452,7 +1462,8 @@ async def add_text(
             created_at=datetime.utcnow(),
             last_accessed=datetime.utcnow(),
             file_hash=None,
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(new_document)
@@ -1525,7 +1536,8 @@ async def remove_images(
             created_at=datetime.utcnow(),
             last_accessed=datetime.utcnow(),
             file_hash=None,
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(new_document)
@@ -1611,7 +1623,8 @@ async def annotate(
             created_at=datetime.utcnow(),
             last_accessed=datetime.utcnow(),
             file_hash=None,
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(new_document)
@@ -1695,7 +1708,8 @@ async def reorder_pages(
             created_at=datetime.utcnow(),
             last_accessed=datetime.utcnow(),
             file_hash=None,
-            owner_id=current_user.id
+            owner_id=current_user.id,
+            owner_email=current_user.email  # Store email for resilience
         )
         
         db.add(new_document)

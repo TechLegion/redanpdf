@@ -30,7 +30,8 @@ def _create_new_document_from_file(db, original_doc, new_file_path, suffix):
         created_at=datetime.utcnow(),
         last_accessed=datetime.utcnow(),
         file_hash=None,  # Optionally compute hash
-        owner_id=original_doc.owner_id
+        owner_id=original_doc.owner_id,
+        owner_email=original_doc.owner_email if hasattr(original_doc, 'owner_email') and original_doc.owner_email else None
     )
     db.add(new_doc)
     db.commit()
@@ -204,7 +205,8 @@ def convert_pdf_to_word(pdf_id: str, db: Session = Depends(get_db)):
             created_at=datetime.utcnow(),
             last_accessed=datetime.utcnow(),
             file_hash=None,
-            owner_id=doc.owner_id
+            owner_id=doc.owner_id,
+            owner_email=doc.owner_email if hasattr(doc, 'owner_email') and doc.owner_email else None
         )
         db.add(new_doc)
         db.commit()
